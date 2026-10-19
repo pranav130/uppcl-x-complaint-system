@@ -152,6 +152,12 @@ class CheckpointStore:
         with self._get_connection() as conn:
             conn.execute("DELETE FROM sync_checkpoints WHERE checkpoint_key = 'last_seen_post_id'")
 
+    def reset_all_for_testing(self) -> None:
+        """Clear all processed posts and watermarks for clean test runs."""
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM processed_posts")
+            conn.execute("DELETE FROM sync_checkpoints")
+
     def get_today_replies_count(self) -> int:
         """Count public replies posted today (UTC/IST)."""
         today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")

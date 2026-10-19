@@ -41,7 +41,10 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
     orchestrator = UPPCLOrchestrator(config)
 
-    if getattr(args, "reset_watermark", False):
+    if getattr(args, "reset_all", False):
+        orchestrator.checkpoint.reset_all_for_testing()
+        print("[*] Database reset. Repolling and inserting all posts...")
+    elif getattr(args, "reset_watermark", False):
         orchestrator.checkpoint.clear_watermark()
         print("[*] Watermark cleared. Repolling all available posts...")
 
@@ -155,6 +158,7 @@ def main() -> None:
     p_sync.add_argument("--dry-run", action="store_true", help="Force dry-run mode (no Google Sheets writes, no X replies)")
     p_sync.add_argument("--daemon", action="store_true", help="Run continuously in background polling loop")
     p_sync.add_argument("--reset-watermark", action="store_true", help="Clear watermark before running to reprocess posts")
+    p_sync.add_argument("--reset-all", action="store_true", help="Clear all database checkpoints and processed posts for fresh testing")
     p_sync.set_defaults(func=cmd_sync)
 
     # Status
