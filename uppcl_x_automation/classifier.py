@@ -145,8 +145,10 @@ OFFICIAL_REPLY_PATTERNS: List[str] = [
     r"पूर्व\s*में\s*दर्ज\s*शिकायत", r"previously\s*lodged", r"दर्ज\s*शिकायत",
     r"शिकायत\s*संख्या", r"complaint\s*(no|number)", r"संबंधित\s*अधिकारी", r"concerned\s*officer",
     r"1912\s*नम्बर\s*पर\s*संपर्क", r"toll-free\s*number\s*1912", r"टोल[- ]?फ्री\s*नंबर",
+    r"contact\s*(number\s*)?1912", r"update\s*you\s*soon", r"we\s*will\s*update\s*you",
+    r"status\s*of\s*the\s*complaint", r"please\s*take\s*action", r"inform\s*the\s*consumer",
     r"\b(PV|DV|MV|PU|KS)\d{8,}\b",
-    r"#1912\w+", r"#dvvnlhq\w*", r"#PVVNLHQ\w*", r"#GoodGovernance"
+    r"#1912\w+", r"#dvvnlhq\w*", r"#PVVNLHQ\w*", r"#GoodGovernance", r"#upm\d+"
 ]
 
 # Genuine Citizen Appreciation (Must explicitly express problem resolution or direct team praise)
@@ -170,7 +172,9 @@ REQUEST_OR_COMPLAINT_INDICATORS: List[str] = [
     r"toot", r"टूट", r"kharab", r"खराब", r"pending", r"पेंडिंग", r"लंबित", r"बकाया",
     r"झूल", r"hanging", r"कब\s*तक", r"सुधार", r"overcharge", r"tripping",
     r"no\s*power", r"no\s*light", r"no\s*electricity", r"power\s*cut",
-    r"आभारी\s*रहेंगे"
+    r"आभारी\s*रहेंगे",
+    r"update\s*you", r"work\s*is\s*going", r"previously\s*lodged", r"concerned\s*officer",
+    r"status\s*of\s*the\s*complaint", r"please\s*take\s*action", r"inform\s*the\s*consumer"
 ]
 
 # Non-Complaint PR / Routine Announcement Patterns
@@ -274,17 +278,19 @@ class GrievanceClassifier:
 
     @staticmethod
     def ends_with_official_handle(text: str) -> bool:
-        """Check if post or reply ends with one or more official UPPCL/DISCOM handles."""
+        """Check if post or reply ends with one or more official UPPCL/DISCOM handles (even if followed by hashtags/links)."""
         if not text:
             return False
-        clean_text = text.strip()
-        trailing_match = re.search(r"((?:@[\w]+\s*)+)[.!?]*$", clean_text)
+        clean = text.strip()
+        # Match trailing handles after stripping trailing hashtags, URLs, and punctuation
+        stripped = re.sub(r"(?:#\w+|\bhttps?://\S+|[.,!?;:\s])+$", "", clean, flags=re.IGNORECASE).strip()
+        trailing_match = re.search(r"((?:@[\w]+\s*)+)$", stripped)
         if trailing_match:
             trailing_part = trailing_match.group(1)
             found_handles = re.findall(r"@([\w]+)", trailing_part)
             for h in found_handles:
-                clean = h.lower()
-                if clean in OFFICIAL_HANDLES or OFFICIAL_HANDLE_REGEX.match(clean) or clean.endswith("hq") or clean.endswith("care"):
+                c = h.lower()
+                if c in OFFICIAL_HANDLES or OFFICIAL_HANDLE_REGEX.match(c) or c.endswith("hq") or c.endswith("care"):
                     return True
         return False
 

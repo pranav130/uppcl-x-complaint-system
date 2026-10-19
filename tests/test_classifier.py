@@ -151,3 +151,22 @@ def test_post_ending_with_official_handle_never_appreciation(classifier):
     assert res.picked_status != "APPRECIATION"
     assert res.picked_status == "YES"
 
+
+def test_mvvnl_in_progress_reply_not_appreciation(classifier):
+    """Verifies the exact tweet from User Pic 1 is never marked as appreciation."""
+    text = (
+        "Dear consumer, as per the information given by the concerned officer, "
+        "work is going on your previously lodged MV15102605779 complaint. We will update you soon "
+        "or for information about the status of the complaint you can contact number 1912 , "
+        "thanks @ZoneAmausi #1912MVVNL191026"
+    )
+    assert classifier.is_official_account("MVVNLHQ") is True
+    assert classifier.is_official_reply_text(text) is True
+    assert classifier.ends_with_official_handle(text) is True
+
+    res = classifier.classify(text, author_username="MVVNLHQ", mentioned_accounts=["@ZoneAmausi"])
+    assert res.picked_status != "APPRECIATION"
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "DISSATISFIED_CONSUMER"
+
+

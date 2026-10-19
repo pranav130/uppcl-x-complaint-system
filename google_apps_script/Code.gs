@@ -182,7 +182,10 @@ function isOfficialAccountInScript(username) {
 
 function endsWithOfficialHandleInScript(text) {
   if (!text) return false;
-  const match = text.trim().match(/((?:@[\w]+\s*)+)[.!?]*$/);
+  const clean = text.trim();
+  // Strip trailing hashtags, URLs, and punctuation to detect trailing handles
+  const stripped = clean.replace(/(?:#\w+|\bhttps?:\/\/\S+|[.,!?;:\s])+$/gi, '').trim();
+  const match = stripped.match(/((?:@[\w]+\s*)+)$/);
   if (match) {
     const handles = match[1].match(/@([\w]+)/g) || [];
     for (let i = 0; i < handles.length; i++) {
@@ -220,7 +223,7 @@ function fixMisclassifiedComplaints() {
 
     const isOfficial = isOfficialAccountInScript(twitterId);
     const endsWithOfficial = endsWithOfficialHandleInScript(String(row[20] || ''));
-    const hasReplyOrComplaintMarkers = /प्रिय\s*उपभोक्ता|प्रिय\s*ग्राहक|काम\s*चल\s*रहा|पूर्व\s*में\s*दर्ज|शिकायत\s*संख्या|1912|संबंधित\s*अधिकारी|समाधान\s*कर\s*दिया|previously\s*lodged|work\s*is\s*going|अनुरोध|ots|बकाया|तार|पोल|खंभा/i.test(fullText);
+    const hasReplyOrComplaintMarkers = /प्रिय\s*उपभोक्ता|प्रिय\s*ग्राहक|काम\s*चल\s*रहा|पूर्व\s*में\s*दर्ज|शिकायत\s*संख्या|1912|संबंधित\s*अधिकारी|समाधान\s*कर\s*दिया|previously\s*lodged|work\s*is\s*going|update\s*you\s*soon|we\s*will\s*update|status\s*of\s*the\s*complaint|contact\s*number\s*1912|dear\s*consumer|concerned\s*officer|please\s*take\s*action|inform\s*the\s*consumer|अनुरोध|ots|बकाया|तार|पोल|खंभा/i.test(fullText);
 
     // If marked APPRECIATION but is an official handle, ends with official handles, or is official reply:
     if (pickedStatus === 'APPRECIATION' && (isOfficial || endsWithOfficial || hasReplyOrComplaintMarkers)) {
