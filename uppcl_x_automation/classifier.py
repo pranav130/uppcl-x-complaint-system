@@ -37,12 +37,13 @@ COMPLAINT_PATTERNS: Dict[str, List[str]] = {
     "ACCIDENT_PRONE_TO_OCCURED": [
         r"करंट", r"करन्ट", r"\bcurrent\b", r"\belectrocution\b", r"शॉर्ट\s*सर्किट", r"short\s*circuit",
         r"आग\s*लग", r"\bfire\b", r"चिंगारी", r"sparking", r"खतरा", r"\bdanger\b",
-        r"दुर्घटना", r"accident", r"चोरी", r"कटिया", r"katiya", r"illegal\s*connection"
+        r"दुर्घटना", r"accident", r"चोरी", r"कटिया", r"katiya", r"illegal\s*connection",
+        r"हादसा", r"हाईटेंशन", r"ht\s*line"
     ],
     "POLE_RELATED": [
         r"खंभा", r"खम्भा", r"\bpole\b", r"तार\s*टूट", r"toota\s*taar", r"wire\s*broken",
         r"टूटा\s*तार", r"तार\s*झूल", r"hanging\s*wire", r"pole\s*fall", r"pole\s*bent",
-        r"पोल\s*टूट", r"पोल\s*गिर", r"तार\s*सड़क"
+        r"पोल\s*टूट", r"पोल\s*गिर", r"तार\s*सड़क", r"broken\s*pole"
     ],
     "SUPPLY_OUTAGE": [
         r"लाइट\s*नहीं", r"बिजली\s*नहीं", r"light\s*nahi", r"bijli\s*nahi", r"बिजली\s*गुल",
@@ -50,12 +51,20 @@ COMPLAINT_PATTERNS: Dict[str, List[str]] = {
         r"no\s*electricity", r"अंधेरा", r"andhera", r"blackout", r"tripping", r"ट्रिपिंग",
         r"लोड\s*शेडिंग", r"load\s*shedding", r"power\s*failure", r"breakdown", r"light\s*chali\s*gayi",
         r"आपूर्ति\s*बाधित", r"विद्युत\s*आपूर्ति\s*ठप", r"supply\s*off", r"phase\s*missing",
-        r"सिंगल\s*फेज", r"single\s*phase"
+        r"सिंगल\s*फेज", r"single\s*phase",
+        # Flexible natural language variations
+        r"बिजली\b.*?\b(नहीं|नही|गायब|गुल|ठप|कट|गई|chali|band|nahi)",
+        r"लाइट\b.*?\b(नहीं|नही|गायब|गुल|ठप|कट|गई|chali|band|nahi)",
+        r"बिना\s*बिजली", r"बिजली\s*(काट|कट|गुल|गायब)",
+        r"light\s*(kaat|kat|cut|off|chali|gul|nahi)",
+        r"supply\s*(disrupt|cut|off|fail|stop)",
+        r"power\s*supply.*?(disrupt|cut|off|fail|stop)",
+        r"आपूर्ति\s*(बाधित|ठप|बंद)"
     ],
     "SUPPLY_VOLTAGE": [
         r"लो\s*वोल्टेज", r"low\s*voltage", r"हाई\s*वोल्टेज", r"high\s*voltage", r"डिम\s*लाइट",
         r"dim\s*light", r"वोल्टेज\s*उतार", r"voltage\s*fluctuation", r"voltage\s*drop",
-        r"motor\s*not\s*running", r"मोटर\s*नहीं\s*चल", r"कम\s*वोल्टेज"
+        r"motor\s*not\s*running", r"मोटर\s*नहीं\s*चल", r"कम\s*वोल्टेज", r"बल्ब\s*(तक\s*)?नहीं\s*जल"
     ],
     "BILL_RELATED": [
         r"\bbill\b", r"बिल", r"गलत\s*बिल", r"wrong\s*bill", r"भारी\s*बिल", r"extra\s*bill",
@@ -76,7 +85,12 @@ COMPLAINT_PATTERNS: Dict[str, List[str]] = {
         r"पूर्व\s*में\s*दर्ज\s*शिकायत", r"previously\s*lodged", r"दर्ज\s*शिकायत",
         r"शिकायत\s*संख्या", r"complaint\s*(no|number)", r"संबंधित\s*अधिकारी",
         r"समाधान\s*कर\s*दिया\s*गया\s*है", r"complaint\s*has\s*been\s*resolved",
-        r"\b(PV|DV|MV|PU|KS)\d{8,}\b"
+        r"\b(PV|DV|MV|PU|KS)\d{8,}\b",
+        # Follow-up dissatisfaction
+        r"समाधान\s*(नहीं|नही)", r"हल\s*(नहीं|नही)",
+        r"(रिक्वेस्ट|शिकायत|ticket)\s*(को\s*)?(क्लोज|बंद|close)",
+        r"no\s*respon[sc]e", r"nobody\s*contacted", r"no\s*action",
+        r"कोई\s*(नहीं\s*आया|सुनवाई\s*नहीं)", r"फर्जी\s*(निस्तारण|क्लोज)"
     ],
     "INFO_AND_SUGG": [
         r"जानकारी\s*चाहिए", r"information\s*needed", r"कृपया\s*बताएं", r"helpline\s*number",
@@ -115,6 +129,8 @@ GENUINE_APPRECIATION_PATTERNS: List[str] = [
     r"(समस्या|शिकायत)\s*का\s*(समाधान|निस्तारण)\s*(हो\s*गया|कर\s*दिया|हुआ)",
     r"बिजली\s*आ\s*गई\s*(है)?", r"लाइट\s*आ\s*गई\s*(है)?", r"power\s*restored", r"light\s*aa\s*gayi",
     r"काम\s*(हो|कर)\s*गया\s*(है)?", r"कार्य\s*पूर्ण\s*हो\s*गया",
+    r"सप्लाई\s*चालू\s*(करने\s*के\s*लिए|हो\s*गई)",
+    r"शानदार\s*(विद्युत\s*)?(आपूर्ति|सप्लाई)",
     r"(problem|complaint|issue|outage|power\s*outage)\s*(is\s*)?(solved|resolved)",
     r"resolv(ing|ed)\s*(the\s*)?(fuse|complaint|issue|outage|power\s*outage|problem)",
     r"(great|excellent|superb|fast|quick|good)\s*(work|job|resolution|service|speed)",
