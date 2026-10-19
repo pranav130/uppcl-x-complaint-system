@@ -142,6 +142,11 @@ class UPPCLOrchestrator:
                 logger.debug(f"Skipping duplicate post ID {p_id} ({post.post_url})")
                 continue
 
+            # Filter out posts initiated by official accounts so they never land on the automated Google Sheet
+            if self.classifier.is_official_account(post.author_username):
+                logger.info(f"Skipping post {p_id} initiated by official account @{post.author_username} (excluded from sheet)")
+                continue
+
             # Historical count for C F (Complaint Frequency)
             cf_count = self.checkpoint.get_author_history_count(post.author_username)
 

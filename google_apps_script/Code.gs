@@ -142,6 +142,58 @@ function makeRowsCompact() {
 }
 
 /**
+ * Global Official UPPCL and DISCOM Handles (90+ apex, headquarters, and district handles)
+ */
+const UPPCL_OFFICIAL_HANDLES = new Set([
+  // Apex & Ministers
+  'uppcllko', 'cmofficeup', 'emofficeup', 'aksharmaoffice', 'aksharmabharat', 'chairmanuppcl', 'mduppcl',
+  // Core DISCOM HQ & Helplines
+  'pvvnlhq', '1912pvvnl', 'pvvnl', 'dvvnlhq', 'dvvnl_care', '1912dvvnl', 'puvvnlhq', 'puvvnl', '1912puvvnl',
+  'kescohq', 'skescokanpur', '1912kesco', 'mvvnlhq', 'mvvnlmd', 'madhyanchalv', '1912mvvnl',
+  // PuVVNL District & Regional Handles
+  'puvvnlazamgarh', 'puvvnlbhadohi', 'puvvnlballia', 'puvvnlbasti', 'puvvnlchandauli', 'puvvnldeoria',
+  'puvvnlfatehpur', 'puvvnlghazipur', 'puvvnlgorakhpur', 'puvvnljaunpur', 'puvvnlkaushambi', 'puvvnlkusinagar',
+  'puvvnlmhrjganj', 'puvvnlmau', 'puvvnlmirzapur1', 'puvvnlprtapgarh', 'puvvnlprayagraj', 'puvvnlsknagar',
+  'puvvnlsdnagar', 'puvvnlsonbhadra', 'puvvnlvaranasi',
+  // MVVNL District & Regional Handles
+  'mvvnlbareilly', 'mvvnlbudaun', 'mvvnlpilibhit', 'mvvnlsahjahapur', 'edc_ambdkrnagar', 'mvvnlamethi',
+  'mvvnlbarabanki', 'mvvnlayodhya', 'mvvnlsultanpur', 'mvvnlbahraich', 'mvvnlbalrampur', 'mvvnlgonda',
+  'mvvnlshrawasti', 'zoneamausi', 'mvvnlcisgomti2', 'zonegomtinagar', 'mvvnllesatrans', 'mvvnllakhimpur',
+  'mvvnlhardoi', 'mvvnlraebareli', 'mvvnlsitapur', 'mvvnlunnao', 'gomtinagarzone', 'cebareilly1',
+  // DVVNL District & Regional Handles
+  'dvvnlagra', 'dvvnlaligarh', 'dvvnlauraiya', 'dvvnlbanda', 'dvvnlchitrakoot', 'dvvnletah',
+  'dvvnletawah01', 'dvvnlfarrukhaba', 'dvvnlfirozabad', 'dvvnlhamirpur', 'dvvnlhathras', 'dvvnljalaun2',
+  'dvvnljhansi', 'dvvnlkannauj', 'dvvnlkanpurdeha', 'dvvnlkanpurnagr', 'dvvnlkasganj', 'dvvnllalitpur2',
+  'dvvnlmahoba', 'dvvnlmainpuri', 'dvvnlmathura1',
+  // PVVNL District & Regional Handles
+  'pvvnlamroha', 'pvvnlbaghpat', 'pvvnlbijnor', 'pvvnlbulandshr', 'pvvnlgbnagar', 'pvvnlghaziabad',
+  'pvvnlhapur', 'pvvnlmeerut', 'pvvnlmoradabad', 'pvvnlmuzafarngr', 'pvvnlrampur', 'pvvnlsaharanpur',
+  'pvvnlsambhal', 'pvvnlshamli', 'pvvnlnoida'
+]);
+
+function isOfficialAccountInScript(username) {
+  if (!username) return false;
+  const u = String(username).toLowerCase().replace(/^@/, '').trim();
+  if (UPPCL_OFFICIAL_HANDLES.has(u)) return true;
+  if (/^(uppcl|kesco|pvvnl|dvvnl|puvvnl|mvvnl|1912|cmoffice|emoffice|aksharma|chairman|mduppcl|zone|ce|se|ee|sdohq|lesa|edc_)/i.test(u)) return true;
+  if (u.endsWith('hq') || u.endsWith('care')) return true;
+  return false;
+}
+
+function endsWithOfficialHandleInScript(text) {
+  if (!text) return false;
+  const match = text.trim().match(/((?:@[\w]+\s*)+)[.!?]*$/);
+  if (match) {
+    const handles = match[1].match(/@([\w]+)/g) || [];
+    for (let i = 0; i < handles.length; i++) {
+      const h = handles[i].replace(/^@/, '').toLowerCase();
+      if (isOfficialAccountInScript(h)) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Scans all rows in 'Twitter Complaint List' and corrects any official DISCOM replies,
  * trailing thread updates, or citizen requests that were incorrectly marked as APPRECIATION.
  */
@@ -158,12 +210,6 @@ function fixMisclassifiedComplaints() {
   const dataRange = sheet.getRange(3, 1, numRows, lastCol);
   const values = dataRange.getValues();
 
-  const officialHandles = [
-    'uppcllko', 'mduppcl', 'chairmanuppcl', 'emofficeup', 'aksharmaoffice', 'aksharmabharat',
-    'pvvnlhq', '1912pvvnl', 'pvvnl', 'dvvnlhq', 'dvvnl_care', 'puvvnlhq', 'puvvnl',
-    'kescohq', 'skescokanpur', '1912kesco', 'mvvnlhq', 'mvvnlmd', 'madhyanchalv', 'zoneamausi'
-  ];
-
   let correctedCount = 0;
 
   for (let i = 0; i < values.length; i++) {
@@ -172,15 +218,12 @@ function fixMisclassifiedComplaints() {
     const pickedStatus = String(row[8] || '').trim().toUpperCase();
     const fullText = (String(row[20] || '') + ' ' + String(row[4] || '')).toLowerCase();
 
-    const isOfficial = officialHandles.some(h => twitterId.includes(h)) ||
-                       twitterId.startsWith('1912') ||
-                       twitterId.endsWith('hq') ||
-                       twitterId.endsWith('care');
-
+    const isOfficial = isOfficialAccountInScript(twitterId);
+    const endsWithOfficial = endsWithOfficialHandleInScript(String(row[20] || ''));
     const hasReplyOrComplaintMarkers = /प्रिय\s*उपभोक्ता|प्रिय\s*ग्राहक|काम\s*चल\s*रहा|पूर्व\s*में\s*दर्ज|शिकायत\s*संख्या|1912|संबंधित\s*अधिकारी|समाधान\s*कर\s*दिया|previously\s*lodged|work\s*is\s*going|अनुरोध|ots|बकाया|तार|पोल|खंभा/i.test(fullText);
 
-    // If marked APPRECIATION but is an official handle or official reply:
-    if (pickedStatus === 'APPRECIATION' && (isOfficial || hasReplyOrComplaintMarkers)) {
+    // If marked APPRECIATION but is an official handle, ends with official handles, or is official reply:
+    if (pickedStatus === 'APPRECIATION' && (isOfficial || endsWithOfficial || hasReplyOrComplaintMarkers)) {
       const rowIndex = i + 3;
       sheet.getRange(rowIndex, 9).setValue('YES'); // Picked Status
       if (!row[9] || String(row[9]).trim() === '') {
@@ -523,6 +566,13 @@ function runCloudSyncCycle() {
 
     const user = usersMap[tweet.author_id] || { username: 'citizen', name: 'Citizen' };
     const username = user.username;
+
+    // Filter out posts initiated by official accounts so they never land on the automated Google Sheet
+    if (isOfficialAccountInScript(username)) {
+      Logger.log('Skipping post initiated by official account: @' + username);
+      continue;
+    }
+
     const authorName = user.name;
     const text = tweet.text || '';
     const tweetUrl = 'https://x.com/' + username + '/status/' + tweetId;
@@ -633,16 +683,8 @@ function classifyTweetInScript(text, username) {
   const lowerText = text.toLowerCase();
   const lowerUser = username.toLowerCase();
 
-  const officialHandles = [
-    'uppcllko', 'mduppcl', 'chairmanuppcl', 'emofficeup', 'aksharmaoffice', 'aksharmabharat',
-    'pvvnlhq', '1912pvvnl', 'pvvnl', 'dvvnlhq', 'dvvnl_care', 'puvvnlhq', 'puvvnl',
-    'kescohq', 'skescokanpur', '1912kesco', 'mvvnlhq', 'mvvnlmd', 'madhyanchalv', 'zoneamausi'
-  ];
-
-  const isOfficial = officialHandles.some(h => lowerUser.includes(h)) ||
-                     lowerUser.startsWith('1912') ||
-                     lowerUser.endsWith('hq') ||
-                     lowerUser.endsWith('care');
+  const isOfficial = isOfficialAccountInScript(username);
+  const endsWithOfficial = endsWithOfficialHandleInScript(text);
 
   // DISCOM Mapping
   let discom = '';
@@ -693,7 +735,8 @@ function classifyTweetInScript(text, username) {
   const hasPureAppreciation = /बहुत\s*बहुत\s*धन्यवाद|उत्कृष्ट\s*कार्य|सराहनीय|great\s*job|thank\s*you\s*so\s*much|thanks\s*for\s*quick/i.test(lowerText) &&
                               !/समस्या|शिकायत|बिजली|outage|complaint|अधिकारी|प्रिय\s*उपभोक्ता/i.test(lowerText);
 
-  if (hasPureAppreciation && !isOfficial) {
+  // Exclude from Appreciation if authored by official, ends with official handles, or has complaint/request markers
+  if (hasPureAppreciation && !isOfficial && !endsWithOfficial) {
     pickedStatus = 'APPRECIATION';
     complaintType = 'APPRECIATION';
   }

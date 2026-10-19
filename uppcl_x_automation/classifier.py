@@ -100,16 +100,41 @@ COMPLAINT_PATTERNS: Dict[str, List[str]] = {
 
 # Known Official DISCOM and Apex Accounts
 OFFICIAL_HANDLES: Set[str] = {
-    "uppcllko", "mduppcl", "chairmanuppcl", "emofficeup", "aksharmaoffice", "aksharmabharat",
-    "pvvnlhq", "1912pvvnl", "pvvnl", "pvvnlmoradabad", "pvvnlmeerut", "pvvnlnoida",
-    "dvvnlhq", "dvvnl_care", "dvvnlkanpurnagr", "dvvnljalaun2", "dvvnlaligarh", "dvvnlagra",
-    "puvvnlhq", "puvvnl", "puvvnlvaranasi", "puvvnlgorakhpur", "puvvnlprayagraj",
+    # Apex & Minister Handles
+    "uppcllko", "cmofficeup", "emofficeup", "aksharmaoffice", "aksharmabharat",
+    "chairmanuppcl", "mduppcl",
+    # Core DISCOM HQ & Helplines
+    "pvvnlhq", "1912pvvnl", "pvvnl",
+    "dvvnlhq", "dvvnl_care", "1912dvvnl",
+    "puvvnlhq", "puvvnl", "1912puvvnl",
     "kescohq", "skescokanpur", "1912kesco",
-    "mvvnlhq", "mvvnlmd", "madhyanchalv", "zoneamausi", "gomtinagarzone", "cebareilly1", "mvvnllesatrans"
+    "mvvnlhq", "mvvnlmd", "madhyanchalv", "1912mvvnl",
+    # PuVVNL Regional & District Handles
+    "puvvnlazamgarh", "puvvnlbhadohi", "puvvnlballia", "puvvnlbasti", "puvvnlchandauli",
+    "puvvnldeoria", "puvvnlfatehpur", "puvvnlghazipur", "puvvnlgorakhpur", "puvvnljaunpur",
+    "puvvnlkaushambi", "puvvnlkusinagar", "puvvnlmhrjganj", "puvvnlmau", "puvvnlmirzapur1",
+    "puvvnlprtapgarh", "puvvnlprayagraj", "puvvnlsknagar", "puvvnlsdnagar", "puvvnlsonbhadra",
+    "puvvnlvaranasi",
+    # MVVNL Regional, District & Zone Handles
+    "mvvnlbareilly", "mvvnlbudaun", "mvvnlpilibhit", "mvvnlsahjahapur", "edc_ambdkrnagar",
+    "mvvnlamethi", "mvvnlbarabanki", "mvvnlayodhya", "mvvnlsultanpur", "mvvnlbahraich",
+    "mvvnlbalrampur", "mvvnlgonda", "mvvnlshrawasti", "zoneamausi", "mvvnlcisgomti2",
+    "zonegomtinagar", "mvvnllesatrans", "mvvnllakhimpur", "mvvnlhardoi", "mvvnlraebareli",
+    "mvvnlsitapur", "mvvnlunnao", "gomtinagarzone", "cebareilly1",
+    # DVVNL Regional & District Handles
+    "dvvnlagra", "dvvnlaligarh", "dvvnlauraiya", "dvvnlbanda", "dvvnlchitrakoot",
+    "dvvnletah", "dvvnletawah01", "dvvnlfarrukhaba", "dvvnlfirozabad", "dvvnlhamirpur",
+    "dvvnlhathras", "dvvnljalaun2", "dvvnljhansi", "dvvnlkannauj", "dvvnlkanpurdeha",
+    "dvvnlkanpurnagr", "dvvnlkasganj", "dvvnllalitpur2", "dvvnlmahoba", "dvvnlmainpuri",
+    "dvvnlmathura1",
+    # PVVNL Regional & District Handles
+    "pvvnlamroha", "pvvnlbaghpat", "pvvnlbijnor", "pvvnlbulandshr", "pvvnlgbnagar",
+    "pvvnlghaziabad", "pvvnlhapur", "pvvnlmeerut", "pvvnlmoradabad", "pvvnlmuzafarngr",
+    "pvvnlrampur", "pvvnlsaharanpur", "pvvnlsambhal", "pvvnlshamli", "pvvnlnoida"
 }
 
 OFFICIAL_HANDLE_REGEX = re.compile(
-    r"^(uppcl|kesco|pvvnl|dvvnl|puvvnl|mvvnl|1912|emoffice|aksharma|chairman|mduppcl|zone|ce|se|ee|sdohq|lesa)",
+    r"^(uppcl|kesco|pvvnl|dvvnl|puvvnl|mvvnl|1912|cmoffice|emoffice|aksharma|chairman|mduppcl|zone|ce|se|ee|sdohq|lesa|edc_)",
     re.IGNORECASE
 )
 
@@ -247,6 +272,22 @@ class GrievanceClassifier:
         """Check if post body contains official DISCOM reply/in-progress boilerplate."""
         return any(r.search(text) for r in self._compiled_official_replies)
 
+    @staticmethod
+    def ends_with_official_handle(text: str) -> bool:
+        """Check if post or reply ends with one or more official UPPCL/DISCOM handles."""
+        if not text:
+            return False
+        clean_text = text.strip()
+        trailing_match = re.search(r"((?:@[\w]+\s*)+)[.!?]*$", clean_text)
+        if trailing_match:
+            trailing_part = trailing_match.group(1)
+            found_handles = re.findall(r"@([\w]+)", trailing_part)
+            for h in found_handles:
+                clean = h.lower()
+                if clean in OFFICIAL_HANDLES or OFFICIAL_HANDLE_REGEX.match(clean) or clean.endswith("hq") or clean.endswith("care"):
+                    return True
+        return False
+
     def classify(
         self,
         text: str,
@@ -270,15 +311,17 @@ class GrievanceClassifier:
         if not has_monitored_tag:
             untagged = "Untagged"
 
-        # Check if author is official or post contains official reply boilerplate
+        # Check if author is official or post contains official reply boilerplate or ends with official handles
         author_is_official = self.is_official_account(author_username)
         has_official_reply_markers = self.is_official_reply_text(text)
+        ends_with_official = self.ends_with_official_handle(text)
 
         # 1. Genuine Citizen Appreciation Check
         # Disqualified if:
         # - Author is official handle OR post has official reply markers (e.g. DISCOM replying to a consumer)
+        # - Post ends with any official handle(s) (e.g. tagging handles at end of grievance)
         # - Post contains citizen request/complaint markers (e.g. asking for OTS, reporting hanging wire with "धन्यवाद")
-        if not author_is_official and not has_official_reply_markers:
+        if not author_is_official and not has_official_reply_markers and not ends_with_official:
             has_genuine_appreciation = any(r.search(text) for r in self._compiled_genuine_appreciation)
             has_request_or_complaint = any(r.search(text) for r in self._compiled_request_or_complaint)
             if has_genuine_appreciation and not has_request_or_complaint:

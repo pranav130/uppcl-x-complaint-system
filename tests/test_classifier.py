@@ -126,10 +126,28 @@ def test_classify_citizen_ots_request_with_aabhari(classifier):
 
 
 def test_classify_genuine_hindi_appreciation(classifier):
-    """Authentic citizen appreciation when power is restored."""
-    text = "@MVVNLHQ @UPPCLLKO बिजली आ गई है धन्यवाद"
-    res = classifier.classify(text, mentioned_accounts=["@MVVNLHQ", "@UPPCLLKO"], author_username="Ajayverma_lko")
+    """Authentic citizen appreciation when power is restored without ending in official handles."""
+    text = "बिजली आ गई है बहुत बहुत धन्यवाद शानदार कार्य"
+    res = classifier.classify(text, author_username="Ajayverma_lko")
     assert res.is_complaint is False
     assert res.picked_status == "APPRECIATION"
     assert res.complaint_type == ""
+
+
+def test_official_handles_initiated_post_disqualified_from_appreciation(classifier):
+    """Posts initiated by official handles must never be marked as appreciation."""
+    for handle in ["UPPCLLKO", "PVVNLHQ", "mvvnlbareilly", "dvvnlagra", "puvvnlvaranasi", "ZoneAmausi"]:
+        assert classifier.is_official_account(handle) is True
+        text = "बिजली आपूर्ति सुचारू रूप से चालू कर दी गई है धन्यवाद"
+        res = classifier.classify(text, author_username=handle)
+        assert res.picked_status != "APPRECIATION"
+
+
+def test_post_ending_with_official_handle_never_appreciation(classifier):
+    """Any post/reply that ends with official handles must NOT be considered as Appreciation."""
+    text = "कार्य पूर्ण हो गया है धन्यवाद @UPPCLLKO @mvvnlbareilly"
+    assert classifier.ends_with_official_handle(text) is True
+    res = classifier.classify(text, author_username="citizen_user")
+    assert res.picked_status != "APPRECIATION"
+    assert res.picked_status == "YES"
 
