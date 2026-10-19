@@ -58,6 +58,7 @@ class AppConfig:
 
     # Google Sheets
     google_service_account_file: Optional[str] = None
+    google_webhook_url: Optional[str] = None
     google_spreadsheet_id: str = "12smJ_xw3sRWPcCzDsh_hC44ac2NlpO9I_wDnXF-wFXU"
     google_sheet_tab_name: str = "Twitter Complaint List"
 
@@ -169,6 +170,7 @@ def load_config(config_path: Optional[str] = None, env_path: Optional[str] = Non
         x_access_token=os.getenv("X_ACCESS_TOKEN"),
         x_access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET"),
         google_service_account_file=os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"),
+        google_webhook_url=os.getenv("GOOGLE_WEBHOOK_URL") or sys_yaml.get("google_webhook_url"),
         google_spreadsheet_id=os.getenv("GOOGLE_SPREADSHEET_ID", "12smJ_xw3sRWPcCzDsh_hC44ac2NlpO9I_wDnXF-wFXU"),
         google_sheet_tab_name=os.getenv("GOOGLE_SHEET_TAB_NAME", "Twitter Complaint List"),
         sqlite_db_path=os.getenv("SQLITE_DB_PATH", "data/uppcl_monitor.db"),

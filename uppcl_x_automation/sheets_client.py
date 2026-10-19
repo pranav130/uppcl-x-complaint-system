@@ -81,11 +81,13 @@ class GoogleSheetsManager:
         spreadsheet_id: str = "12smJ_xw3sRWPcCzDsh_hC44ac2NlpO9I_wDnXF-wFXU",
         tab_name: str = "Twitter Complaint List",
         service_account_file: Optional[str] = None,
+        webhook_url: Optional[str] = None,
         dry_run: bool = True,
     ):
         self.spreadsheet_id = spreadsheet_id
         self.tab_name = tab_name
         self.service_account_file = service_account_file
+        self.webhook_url = webhook_url
         self.dry_run = dry_run
         self.client = None
         self.sheet = None
@@ -216,16 +218,37 @@ class GoogleSheetsManager:
 
         serialized_rows = [self.serialize_row(d) for d in rows_data]
 
-        if self.dry_run or not self._is_authorized:
-            logger.info(f"[DRY-RUN / OFFLINE] Successfully prepared {len(serialized_rows)} rows for insertion into '{self.tab_name}'.")
+        if self.dry_run:
+            logger.info(f"[DRY-RUN / OFFLINE] Prepared {len(serialized_rows)} rows for insertion into '{self.tab_name}'.")
             return len(serialized_rows), None
 
-        try:
-            # Use gspread batch append
-            self.sheet.append_rows(serialized_rows, value_input_option="USER_ENTERED")
-            logger.info(f"Successfully appended {len(serialized_rows)} rows into Google Sheet.")
-            return len(serialized_rows), None
-        except Exception as e:
-            err_msg = f"Failed to append rows to Google Sheets: {e}"
-            logger.error(err_msg)
-            return 0, err_msg
+        # 1. Prefer Service Account gspread if authorized
+        if self._is_authorized and self.sheet:
+            try:
+                self.sheet.append_rows(serialized_rows, value_input_option="USER_ENTERED")
+                logger.info(f"Successfully appended {len(serialized_rows)} rows into Google Sheet via API.")
+                return len(serialized_rows), None
+            except Exception as e:
+                err_msg = f"Failed to append rows via Google Sheets API: {e}"
+                logger.error(err_msg)
+                return 0, err_msg
+
+        # 2. Alternatively use Google Apps Script Webhook
+        if self.webhook_url:
+            try:
+                resp = requests.post(self.webhook_url, json={"rows": serialized_rows}, timeout=30)
+                if resp.status_code == 200:
+                    logger.info(f"Successfully appended {len(serialized_rows)} rows into Google Sheet via Apps Script Webhook.")
+                    return len(serialized_rows), None
+                else:
+                    err_msg = f"Apps Script Webhook returned HTTP {resp.status_code}: {resp.text}"
+                    logger.error(err_msg)
+                    return 0, err_msg
+            except Exception as e:
+                err_msg = f"Failed to post to Apps Script Webhook: {e}"
+                logger.error(err_msg)
+                return 0, err_msg
+
+        logger.warning("No Google Service Account or Webhook URL configured. Google Sheets running in offline mode.")
+        return 0, "No authorized Google Sheets destination configured"
+

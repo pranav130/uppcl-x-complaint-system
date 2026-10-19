@@ -170,3 +170,51 @@ function refreshDashboard() {
   SpreadsheetApp.flush();
   SpreadsheetApp.getUi().alert('Dashboard metrics refreshed.');
 }
+
+/**
+ * Webhook receiver for automated row ingestion from Python.
+ * Deploy as Web App: Extensions -> Apps Script -> Deploy -> New deployment -> Web app
+ * Execute as: Me, Who has access: Anyone
+ */
+function doPost(e) {
+  try {
+    const contents = JSON.parse(e.postData.contents);
+    const rows = contents.rows;
+    if (!rows || !rows.length) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', inserted: 0 }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Twitter Complaint List');
+    if (!sheet) {
+      sheet = ss.getActiveSheet();
+    }
+
+    const startRow = Math.max(sheet.getLastRow() + 1, 3);
+    const range = sheet.getRange(startRow, 1, rows.length, rows[0].length);
+    range.setValues(rows);
+    range.setFontFamily('Verdana');
+    range.setFontSize(10);
+    range.setHorizontalAlignment('center');
+    range.setVerticalAlignment('middle');
+    range.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+
+    // Left-align text and URL columns
+    sheet.getRange(startRow, 5, rows.length, 1).setHorizontalAlignment('left');  // URL
+    if (rows[0].length >= 21) {
+      sheet.getRange(startRow, 21, rows.length, 1).setHorizontalAlignment('left'); // Post Text
+    }
+    if (rows[0].length >= 27) {
+      sheet.getRange(startRow, 27, rows.length, 1).setHorizontalAlignment('left'); // Reply Draft
+    }
+
+    SpreadsheetApp.flush();
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', inserted: rows.length, startRow: startRow }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+

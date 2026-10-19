@@ -51,6 +51,7 @@ class UPPCLOrchestrator:
             spreadsheet_id=config.google_spreadsheet_id,
             tab_name=config.google_sheet_tab_name,
             service_account_file=config.google_service_account_file,
+            webhook_url=config.google_webhook_url,
             dry_run=config.dry_run,
         )
         self.x_client = XClient(
