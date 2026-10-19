@@ -131,19 +131,15 @@ class GoogleSheetsManager:
         if self._is_authorized and self.sheet:
             try:
                 records = self.sheet.get_all_values()
-                if len(records) > 9:  # Row 9 is header, data starts at row 10
-                    for row in records[9:]:
-                        # Column E (index 4) is ' LINK URL'
-                        if len(row) > 4 and row[4]:
-                            url = row[4].strip()
+                for row in records:
+                    if len(row) > 4 and row[4]:
+                        url = row[4].strip()
+                        m = re.search(r"status/(\d+)", url)
+                        if m:
                             post_urls.add(url)
-                            # Extract tweet id from URL: status/123456789
-                            m = re.search(r"status/(\d+)", url)
-                            if m:
-                                post_ids.add(m.group(1))
-                        # Column T (index 19) is 'Post ID' if populated
-                        if len(row) > 19 and row[19]:
-                            post_ids.add(row[19].strip())
+                            post_ids.add(m.group(1))
+                    if len(row) > 19 and row[19] and row[19].strip().isdigit():
+                        post_ids.add(row[19].strip())
                 return post_ids, post_urls
             except Exception as e:
                 logger.warning(f"Error reading existing rows via API: {e}. Trying public CSV export.")
@@ -154,18 +150,16 @@ class GoogleSheetsManager:
             resp = requests.get(export_url, timeout=15)
             if resp.status_code == 200:
                 reader = csv.reader(io.StringIO(resp.text))
-                rows = list(reader)
-                if len(rows) > 9:
-                    for row in rows[9:]:
-                        if len(row) > 4 and row[4]:
-                            url = row[4].strip()
+                for row in reader:
+                    if len(row) > 4 and row[4]:
+                        url = row[4].strip()
+                        m = re.search(r"status/(\d+)", url)
+                        if m:
                             post_urls.add(url)
-                            m = re.search(r"status/(\d+)", url)
-                            if m:
-                                post_ids.add(m.group(1))
-                        if len(row) > 19 and row[19]:
-                            post_ids.add(row[19].strip())
-                logger.info(f"Loaded {len(post_ids)} existing post IDs from public CSV export.")
+                            post_ids.add(m.group(1))
+                    if len(row) > 19 and row[19] and row[19].strip().isdigit():
+                        post_ids.add(row[19].strip())
+                logger.info(f"Loaded {len(post_ids)} existing post IDs from CSV export.")
         except Exception as e:
             logger.error(f"Failed to fetch existing post identifiers: {e}")
 

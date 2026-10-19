@@ -15,7 +15,9 @@ def orchestrator(tmp_path):
     config.sqlite_db_path = str(tmp_path / "test_orch.db")
     config.dry_run = True
     config.auto_post_enabled = False
-    return UPPCLOrchestrator(config)
+    orch = UPPCLOrchestrator(config)
+    orch.sheets.fetch_existing_post_identifiers = lambda: (set(), set())
+    return orch
 
 
 def test_end_to_end_sync_cycle(orchestrator):
