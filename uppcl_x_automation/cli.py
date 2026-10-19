@@ -10,6 +10,13 @@ import argparse
 import logging
 import sys
 import time
+
+# Ensure UTF-8 output on Windows consoles for Hindi text
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from uppcl_x_automation.config import load_config
 from uppcl_x_automation.orchestrator import UPPCLOrchestrator
 from uppcl_x_automation.checkpoint import CheckpointStore

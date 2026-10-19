@@ -143,7 +143,7 @@ class DiscomRouter:
         mentioned_discoms = set()
         for d_code, d_info in self.discoms.items():
             if d_info.handle.lower() in clean_text.lower():
-                mentioned_discoms.add(d_code)
+                mentioned_discoms.add(d_code.upper())
 
         # Step 2: Check for direct mentions of Canonical Districts in post text
         found_districts: List[Tuple[str, DistrictInfo, str]] = []
@@ -188,8 +188,8 @@ class DiscomRouter:
             discom_obj = self._get_discom(discom_code)
             discom_handle = discom_obj.handle if discom_obj else None
 
-            # If the user also mentioned a specific DISCOM handle, verify agreement
-            if mentioned_discoms and discom_code not in mentioned_discoms:
+            # If the user also mentioned a specific DISCOM handle, verify agreement (case-insensitive)
+            if mentioned_discoms and discom_code.upper() not in mentioned_discoms:
                 # Contradiction: text mentions District X belonging to Discom A, but tagged Discom B
                 return RoutingResult(
                     discom=discom_code,
