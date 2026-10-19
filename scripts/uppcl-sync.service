@@ -1,0 +1,17 @@
+[Unit]
+Description=UPPCL X Complaint Monitoring & Google Sheets Sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=uppcl
+WorkingDirectory=/opt/uppcl-x-complaint-system
+ExecStart=/opt/uppcl-x-complaint-system/.venv/bin/python -m uppcl_x_automation.cli sync
+StandardOutput=journal
+StandardError=journal
+Restart=on-failure
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target

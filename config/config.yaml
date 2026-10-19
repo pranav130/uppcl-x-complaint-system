@@ -1,0 +1,311 @@
+# ==============================================================================
+# UPPCL X Complaint Monitoring & Routing Configuration
+# ==============================================================================
+
+system:
+  app_name: "UPPCL X Complaint Monitoring & Sheet Sync"
+  version: "1.0.0"
+  timezone: "Asia/Kolkata"
+  polling_interval_minutes: 5
+  dry_run: true
+  auto_post_enabled: false
+  emergency_stop: false
+  daily_post_cap: 50
+
+# Monitored Apex Accounts (Consumer complaint & escalation handles)
+monitored_accounts:
+  - handle: "@UPPCLLKO"
+    code: "upl"
+    name: "UPPCL Official"
+  - handle: "@EMofficeUP"
+    code: "emo"
+    name: "Energy Minister Office UP"
+  - handle: "@AKSharmaOffice"
+    code: "ako"
+    name: "AK Sharma Minister Office"
+  - handle: "@aksharmaBharat"
+    code: "akb"
+    name: "AK Sharma Cabinet Minister"
+  - handle: "@ChairmanUppcl"
+    code: "upc"
+    name: "Chairman UPPCL"
+  - handle: "@mduppcl"
+    code: "upm"
+    name: "MD UPPCL"
+
+# Receiving DISCOM Corporate Accounts (Official HQ Handles)
+discoms:
+  PVVNL:
+    name: "Pashchimanchal Vidyut Vitran Nigam Limited"
+    handle: "@PVVNLHQ"
+    headquarters: "Meerut"
+    region: "Western UP"
+  DVVNL:
+    name: "Dakshinanchal Vidyut Vitran Nigam Limited"
+    handle: "@dvvnlhq"
+    headquarters: "Agra"
+    region: "Southern / South-Western UP"
+  PuVVNL:
+    name: "Purvanchal Vidyut Vitran Nigam Limited"
+    handle: "@PuVVNLHQ"
+    headquarters: "Varanasi"
+    region: "Eastern UP"
+  KESCo:
+    name: "Kanpur Electricity Supply Company"
+    handle: "@KESCoHQ"
+    headquarters: "Kanpur"
+    region: "Kanpur Urban"
+  MVVNL:
+    name: "Madhyanchal Vidyut Vitran Nigam Limited"
+    handle: "@MVVNLHQ"
+    headquarters: "Lucknow"
+    region: "Central UP"
+
+# Permitted reply recipient accounts (Safety allowlist)
+allowed_discom_handles:
+  - "@PVVNLHQ"
+  - "@dvvnlhq"
+  - "@PuVVNLHQ"
+  - "@KESCoHQ"
+  - "@MVVNLHQ"
+
+# Complete 75 District Canonical Mapping to DISCOM and Zone
+districts:
+  # MVVNL (Central UP - 19 Districts)
+  BAREILY: { discom: "MVVNL", zone: "BAREILY-1" }
+  BADAUN: { discom: "MVVNL", zone: "BAREILY-2" }
+  PILIBHIT: { discom: "MVVNL", zone: "BAREILY-2" }
+  SHAJAHANPUR: { discom: "MVVNL", zone: "BAREILY-2" }
+  AYODHYA: { discom: "MVVNL", zone: "AYODHYA" }
+  AMBEDKAR NAGAR: { discom: "MVVNL", zone: "AYODHYA" }
+  BARABANKI: { discom: "MVVNL", zone: "AYODHYA" }
+  SULTANPUR: { discom: "MVVNL", zone: "AYODHYA" }
+  AMETHI: { discom: "MVVNL", zone: "AYODHYA" }
+  GONDA: { discom: "MVVNL", zone: "DEVIPATAN" }
+  BAHRAICH: { discom: "MVVNL", zone: "DEVIPATAN" }
+  SHRAVASTI: { discom: "MVVNL", zone: "DEVIPATAN" }
+  BALRAMPUR: { discom: "MVVNL", zone: "DEVIPATAN" }
+  LUCKNOW: { discom: "MVVNL", zone: "LESA" }
+  HARDOI: { discom: "MVVNL", zone: "SITAPUR" }
+  LAKHIMPUR: { discom: "MVVNL", zone: "SITAPUR" }
+  RAEBAREILY: { discom: "MVVNL", zone: "RAEBAREILY" }
+  SITAPUR: { discom: "MVVNL", zone: "SITAPUR" }
+  UNNAO: { discom: "MVVNL", zone: "RAEBAREILY" }
+
+  # PVVNL (Western UP - 14 Districts)
+  MEERUT: { discom: "PVVNL", zone: "MEERUT" }
+  BAGHPAT: { discom: "PVVNL", zone: "MEERUT-2" }
+  GHAZIABAD: { discom: "PVVNL", zone: "GHAZIABAD" }
+  BULANDSAHAR: { discom: "PVVNL", zone: "BULANDSAHAR" }
+  HAPUR: { discom: "PVVNL", zone: "BULANDSAHAR" }
+  MORADABAD: { discom: "PVVNL", zone: "MORADABAD" }
+  BIJNOR: { discom: "PVVNL", zone: "GAZRAULA" }
+  RAMPUR: { discom: "PVVNL", zone: "MORADABAD" }
+  SAMBHAL: { discom: "PVVNL", zone: "MORADABAD" }
+  AMROHA: { discom: "PVVNL", zone: "GAZRAULA" }
+  SAHARANPUR: { discom: "PVVNL", zone: "SAHARANPUR" }
+  MUZAFFERNAGAR: { discom: "PVVNL", zone: "MUZAFFERNAGAR" }
+  SHAMLI: { discom: "PVVNL", zone: "MUZAFFERNAGAR" }
+  GAUTAM BUDH NAGAR: { discom: "PVVNL", zone: "NOIDA" }
+
+  # PuVVNL (Eastern UP - 21 Districts)
+  AZAMGARH: { discom: "PuVVNL", zone: "AZAMGARH" }
+  BALLIA: { discom: "PuVVNL", zone: "AZAMGARH" }
+  MAU: { discom: "PuVVNL", zone: "AZAMGARH" }
+  PRAYAGRAJ: { discom: "PuVVNL", zone: "PRAYAGRAJ-1" }
+  FATEHPUR: { discom: "PuVVNL", zone: "PRAYAGRAJ-2" }
+  PRATAPGARH: { discom: "PuVVNL", zone: "PRAYAGRAJ-2" }
+  KAUSHAMBI: { discom: "PuVVNL", zone: "PRAYAGRAJ-2" }
+  GORAKHPUR: { discom: "PuVVNL", zone: "GORAKHPUR-1" }
+  DEORIA: { discom: "PuVVNL", zone: "GORAKHPUR-2" }
+  MAHARAJGANJ: { discom: "PuVVNL", zone: "GORAKHPUR-2" }
+  KUSHINAGAR: { discom: "PuVVNL", zone: "GORAKHPUR-2" }
+  BASTI: { discom: "PuVVNL", zone: "BASTI" }
+  SIDDHARTH NAGAR: { discom: "PuVVNL", zone: "BASTI" }
+  SANT KABIR NAGAR: { discom: "PuVVNL", zone: "BASTI" }
+  VARANASI: { discom: "PuVVNL", zone: "VARANASI-1" }
+  CHANDAULI: { discom: "PuVVNL", zone: "VARANASI-2" }
+  GHAZIPUR: { discom: "PuVVNL", zone: "VARANASI-2" }
+  JAUNPUR: { discom: "PuVVNL", zone: "VARANASI-2" }
+  MIRZAPUR: { discom: "PuVVNL", zone: "MIRZAPUR" }
+  BHADOHI: { discom: "PuVVNL", zone: "MIRZAPUR" }
+  SONBHADRA: { discom: "PuVVNL", zone: "MIRZAPUR" }
+
+  # DVVNL (Southern / South-Western UP - 21 Districts)
+  AGRA: { discom: "DVVNL", zone: "AGRA-1" }
+  FIROZABAD: { discom: "DVVNL", zone: "FIROZABAD" }
+  MAINPURI: { discom: "DVVNL", zone: "FIROZABAD" }
+  MATHURA: { discom: "DVVNL", zone: "MATHURA" }
+  ALIGARH: { discom: "DVVNL", zone: "ALIGARH" }
+  HATHRAS: { discom: "DVVNL", zone: "ETAH" }
+  ETAH: { discom: "DVVNL", zone: "ETAH" }
+  KASGANJ: { discom: "DVVNL", zone: "ETAH" }
+  BANDA: { discom: "DVVNL", zone: "BANDA" }
+  CHITRAKOOT: { discom: "DVVNL", zone: "BANDA" }
+  HAMIRPUR: { discom: "DVVNL", zone: "BANDA" }
+  MAHOBA: { discom: "DVVNL", zone: "BANDA" }
+  JHANSI: { discom: "DVVNL", zone: "JHANSI" }
+  JALAUN: { discom: "DVVNL", zone: "JHANSI" }
+  LALITPUR: { discom: "DVVNL", zone: "JHANSI" }
+  KANPUR DEHAT: { discom: "DVVNL", zone: "KANPUR-1" }
+  ETAWAH: { discom: "DVVNL", zone: "KANPUR-2" }
+  FARRUKHABAD: { discom: "DVVNL", zone: "KANPUR-2" }
+  KANNAUJ: { discom: "DVVNL", zone: "KANPUR-2" }
+  AURAIYA: { discom: "DVVNL", zone: "KANPUR-2" }
+
+  # KESCo (Kanpur Urban)
+  KANPUR CITY: { discom: "KESCO", zone: "KESCO" }
+
+# Aliases, Synonyms, and Local Names (English, Hinglish, Devanagari Hindi)
+district_aliases:
+  NOIDA: "GAUTAM BUDH NAGAR"
+  GREATER NOIDA: "GAUTAM BUDH NAGAR"
+  GB NAGAR: "GAUTAM BUDH NAGAR"
+  G.B. NAGAR: "GAUTAM BUDH NAGAR"
+  GAUTAM BUDDHA NAGAR: "GAUTAM BUDH NAGAR"
+  DADRI: "GAUTAM BUDH NAGAR"
+  नोएडा: "GAUTAM BUDH NAGAR"
+  ग्रेटर नोएडा: "GAUTAM BUDH NAGAR"
+  गौतम बुद्ध नगर: "GAUTAM BUDH NAGAR"
+  BANARAS: "VARANASI"
+  KASHI: "VARANASI"
+  बनारस: "VARANASI"
+  काशी: "VARANASI"
+  वाराणसी: "VARANASI"
+  ALLAHABAD: "PRAYAGRAJ"
+  ILAHABAD: "PRAYAGRAJ"
+  इलाहाबाद: "PRAYAGRAJ"
+  प्रयागराज: "PRAYAGRAJ"
+  FAIZABAD: "AYODHYA"
+  फैजाबाद: "AYODHYA"
+  अयोध्या: "AYODHYA"
+  LUCKNOW CITY: "LUCKNOW"
+  LESA: "LUCKNOW"
+  लखनऊ: "LUCKNOW"
+  लखनउ: "LUCKNOW"
+  KANPUR: "KANPUR CITY"
+  KANPUR URBAN: "KANPUR CITY"
+  कानपुर: "KANPUR CITY"
+  कानपुर नगर: "KANPUR CITY"
+  KANPUR NAGAR: "KANPUR CITY"
+  कानपुर देहात: "KANPUR DEHAT"
+  RAE BARELI: "RAEBAREILY"
+  रायबरेली: "RAEBAREILY"
+  LAKHIMPUR KHERI: "LAKHIMPUR"
+  KHERI: "LAKHIMPUR"
+  लखीमपुर: "LAKHIMPUR"
+  लखीमपुर खीरी: "LAKHIMPUR"
+  BAREILLY: "BAREILY"
+  बरेली: "BAREILY"
+  BULANDSHAHR: "BULANDSAHAR"
+  बुलंदशहर: "BULANDSAHAR"
+  SHAHJAHANPUR: "SHAJAHANPUR"
+  शाहजहांपुर: "SHAJAHANPUR"
+  BUDAUN: "BADAUN"
+  BUDAYUN: "BADAUN"
+  बदायूं: "BADAUN"
+  SANT RAVIDAS NAGAR: "BHADOHI"
+  भदोही: "BHADOHI"
+  KHALILABAD: "SANT KABIR NAGAR"
+  संत कबीर नगर: "SANT KABIR NAGAR"
+  SIDDHARTHNAGAR: "SIDDHARTH NAGAR"
+  सिद्धार्थनगर: "SIDDHARTH NAGAR"
+  FARUKHABAD: "FARRUKHABAD"
+  FARUKKHABAD: "FARRUKHABAD"
+  फर्रुखाबाद: "FARRUKHABAD"
+  KANAUJJ: "KANNAUJ"
+  कन्नौज: "KANNAUJ"
+  AURIYA: "AURAIYA"
+  औरैया: "AURAIYA"
+  CHITRKOOT: "CHITRAKOOT"
+  चित्रकूट: "CHITRAKOOT"
+  JALAUN(URAI): "JALAUN"
+  ORAI: "JALAUN"
+  उरई: "JALAUN"
+  जालौन: "JALAUN"
+  गोरखपुर: "GORAKHPUR"
+  झांसी: "JHANSI"
+  मेरठ: "MEERUT"
+  गाजियाबाद: "GHAZIABAD"
+  आगरा: "AGRA"
+  अलीगढ़: "ALIGARH"
+  मथुरा: "MATHURA"
+  सहारनपुर: "SAHARANPUR"
+  मुरादाबाद: "MORADABAD"
+  मुजफ्फरनगर: "MUZAFFERNAGAR"
+  शामली: "SHAMLI"
+  हापुड़: "HAPUR"
+  बागपत: "BAGHPAT"
+  बिजनौर: "BIJNOR"
+  रामपुर: "RAMPUR"
+  संभल: "SAMBHAL"
+  अमरोहा: "AMROHA"
+  गोंडा: "GONDA"
+  बहराइच: "BAHRAICH"
+  बलरामपुर: "BALRAMPUR"
+  श्रावस्ती: "SHRAVASTI"
+  पीलीभीत: "PILIBHIT"
+  बाराबंकी: "BARABANKI"
+  अमेठी: "AMETHI"
+  सुल्तानपुर: "SULTANPUR"
+  अम्बेडकर नगर: "AMBEDKAR NAGAR"
+  फतेहपुर: "FATEHPUR"
+  प्रतापगढ़: "PRATAPGARH"
+  कौशाम्बी: "KAUSHAMBI"
+  सोनभद्र: "SONBHADRA"
+  मिर्जापुर: "MIRZAPUR"
+  जौनपुर: "JAUNPUR"
+  गाजीपुर: "GHAZIPUR"
+  बलिया: "BALLIA"
+  मऊ: "MAU"
+  देवरिया: "DEORIA"
+  कुशीनगर: "KUSHINAGAR"
+  महाराजगंज: "MAHARAJGANJ"
+  बस्ती: "BASTI"
+  ललितपुर: "LALITPUR"
+  बांदा: "BANDA"
+  हमीरपुर: "HAMIRPUR"
+  महोबा: "MAHOBA"
+  मैनपुरी: "MAINPURI"
+  इटावा: "ETAWAH"
+  फिरोजाबाद: "FIROZABAD"
+  हाथरस: "HATHRAS"
+  एटा: "ETAH"
+  कासगंज: "KASGANJ"
+  उन्नाव: "UNNAO"
+  सीतापुर: "SITAPUR"
+  हरदोई: "HARDOI"
+  चंदौली: "CHANDAULI"
+
+# Shift Windows (Indian Standard Time - UTC+5:30)
+shifts:
+  NIGHT: { start_hour: 22, end_hour: 6 }
+  MORNING: { start_hour: 6, end_hour: 14 }
+  EVENING: { start_hour: 14, end_hour: 22 }
+
+# Official Reply Templates
+reply_templates:
+  SUPPLY_OUTAGE:
+    hi: "Concerned team {discom_handle}, कृपया सम्मानित उपभोक्ता की बिजली आपूर्ति बाधित होने की शिकायत का संज्ञान लेकर आवश्यक कार्यवाही करें।"
+    en: "Concerned team {discom_handle}, kindly look into this consumer power supply outage grievance and take prompt action."
+  TRANSFORMER_DAMAGE:
+    hi: "Concerned team {discom_handle}, कृपया क्षतिग्रस्त परिवर्तक (ट्रांसफार्मर) का अविलंब संज्ञान लेकर नियमानुसार आवश्यक कार्यवाही सुनिश्चित करें।"
+    en: "Concerned team {discom_handle}, kindly inspect the damaged transformer and expedite replacement/repairs."
+  BILL_RELATED:
+    hi: "Concerned team {discom_handle}, कृपया सम्मानित उपभोक्ता की बिल सम्बन्धी शिकायत का संज्ञान लेकर त्वरित निस्तारण सुनिश्चित करें।"
+    en: "Concerned team {discom_handle}, kindly examine this billing grievance and assist the consumer."
+  POLE_RELATED:
+    hi: "Concerned team {discom_handle}, कृपया क्षतिग्रस्त पोल/तार की सूचना को गंभीरता से संज्ञान में लेकर तत्काल आवश्यक अनुरक्षण कार्य कराएं।"
+    en: "Concerned team {discom_handle}, kindly inspect this damaged pole/wire hazard and ensure electrical safety immediately."
+  SUPPLY_VOLTAGE:
+    hi: "Concerned team {discom_handle}, कृपया वोल्टेज समस्या (लो/हाई वोल्टेज) का संज्ञान लेकर आपूर्ति को सामान्य कराना सुनिश्चित करें।"
+    en: "Concerned team {discom_handle}, kindly address this voltage fluctuation grievance and restore stable supply."
+  CONNECTION_NEW:
+    hi: "Concerned team {discom_handle}, कृपया नवीन संयोजन (नए कनेक्शन) सम्बन्धी इस प्रकरण का संज्ञान लेकर आवश्यक कार्यवाही करें।"
+    en: "Concerned team {discom_handle}, kindly review this new electricity connection application request."
+  ACCIDENT_PRONE_TO_OCCURED:
+    hi: "Concerned team {discom_handle}, कृपया सुरक्षा खतरे / संभावित दुर्घटना की इस सूचना पर तत्काल प्राथमिकता के आधार पर कार्यवाही करें।"
+    en: "Concerned team {discom_handle}, urgent: please address this electrical safety hazard on high priority."
+  DEFAULT:
+    hi: "Concerned team {discom_handle}, कृपया इस जनशिकायत का संज्ञान लेकर नियमानुसार आवश्यक कार्यवाही सुनिश्चित करें।"
+    en: "Concerned team {discom_handle}, kindly look into this consumer grievance and take appropriate action."

@@ -1,0 +1,88 @@
+"""Unit tests for GrievanceClassifier.
+
+Tests Hindi, English, Hinglish complaint categorization, shift detection,
+PR announcement filtering, and appreciation detection.
+"""
+
+from datetime import datetime, timezone
+import pytest
+from uppcl_x_automation.classifier import GrievanceClassifier
+
+
+@pytest.fixture
+def classifier():
+    return GrievanceClassifier()
+
+
+def test_classify_supply_outage_hindi(classifier):
+    text = "@UPPCLLKO लखनऊ गोमती नगर में पिछले 6 घंटे से बिजली नहीं आ रही है, कृपया तुरंत सप्लाई चालू कराएं।"
+    res = classifier.classify(text, mentioned_accounts=["@UPPCLLKO"])
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "SUPPLY_OUTAGE"
+    assert res.language == "hi"
+    assert res.head == "upl"
+
+
+def test_classify_transformer_damage_hinglish(classifier):
+    text = "@aksharmaBharat @mduppcl Hamare gaon me 63 KVA transformer fuk gaya hai. Blast hua tha kal raat."
+    res = classifier.classify(text, mentioned_accounts=["@aksharmaBharat", "@mduppcl"])
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "TRANSFORMER_DAMAGE"
+    assert res.head == "upm"  # MD UPPCL takes priority in head resolution
+
+
+def test_classify_billing_english(classifier):
+    text = "@UPPCLLKO Received a high bill of Rs 45,000 for a 1-room house. Smart meter recharge overcharged."
+    res = classifier.classify(text, mentioned_accounts=["@UPPCLLKO"])
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "BILL_RELATED"
+    assert res.language == "en"
+
+
+def test_classify_pole_hazard(classifier):
+    text = "@UPPCLLKO 11KV wire broken and hanging on main road. Electric current spark noticed."
+    res = classifier.classify(text, mentioned_accounts=["@UPPCLLKO"])
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type in ("POLE_RELATED", "ACCIDENT_PRONE_TO_OCCURED")
+
+
+def test_classify_appreciation(classifier):
+    text = "@UPPCLLKO @mduppcl Thank you so much for resolving the power outage in 20 minutes! Great work team."
+    res = classifier.classify(text, mentioned_accounts=["@UPPCLLKO", "@mduppcl"])
+    assert res.is_complaint is False
+    assert res.picked_status == "APPRECIATION"
+    assert res.complaint_type == ""
+
+
+def test_classify_pr_announcement(classifier):
+    text = "ऊर्जा मंत्री श्री @aksharmaBharat जी ने आज शक्ति भवन में वरिष्ठ अधिकारियों के साथ विभागीय समीक्षा बैठक की।"
+    res = classifier.classify(text, mentioned_accounts=["@aksharmaBharat"])
+    assert res.is_complaint is False
+    assert res.picked_status == "NO"
+
+
+def test_shift_detection(classifier):
+    # 03:00 UTC = 08:30 IST -> MORNING shift
+    utc_morning = datetime(2026, 10, 19, 3, 0, 0, tzinfo=timezone.utc)
+    _, shift_morning = classifier.get_ist_shift_and_date(utc_morning)
+    assert shift_morning == "MORNING"
+
+    # 10:00 UTC = 15:30 IST -> EVENING shift
+    utc_evening = datetime(2026, 10, 19, 10, 0, 0, tzinfo=timezone.utc)
+    _, shift_evening = classifier.get_ist_shift_and_date(utc_evening)
+    assert shift_evening == "EVENING"
+
+    # 18:00 UTC = 23:30 IST -> NIGHT shift
+    utc_night = datetime(2026, 10, 19, 18, 0, 0, tzinfo=timezone.utc)
+    _, shift_night = classifier.get_ist_shift_and_date(utc_night)
+    assert shift_night == "NIGHT"
+
+
+def test_untagged_complaint_detection(classifier):
+    text = "Bijli nahi aa rahi hai subah se"
+    res = classifier.classify(text, mentioned_accounts=[])
+    assert res.untagged_complaint == "Untagged"
