@@ -12,7 +12,8 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('UPPCL Automation')
-    .addItem('Standardize All Row Formats (Match Rows 10-18)', 'standardizeFormatting')
+    .addItem('Restore Blue Clickable Links & Format', 'restoreBlueLinksAndFormat')
+    .addItem('Standardize All Row Formats', 'standardizeFormatting')
     .addSeparator()
     .addItem('Review Pending Drafts', 'highlightPendingDrafts')
     .addItem('Approve Selected Rows', 'approveSelectedRows')
@@ -26,18 +27,10 @@ function onOpen() {
 }
 
 /**
- * Standardizes the entire 'Twitter Complaint List' sheet:
- * - Keeps Row 1 Cyan Header (Height: 66px, Verdana 13pt Bold)
- * - Keeps Row 2 Cyan Counter (Height: 33px, Verdana 11pt Bold)
- * - Formats all Data Rows (Row 3 onwards):
- *   * Compact uniform height: 22px
- *   * Clip text wrap (prevents multi-line blowup from URLs)
- *   * Font: Verdana 10pt
- *   * Vertical alignment: Middle
- *   * Solid 1px black borders
- *   * Left-align for URLs and post text
+ * Restores Column E (and Column 29) to native Google Sheets blue clickable hyperlinks
+ * and applies uniform 22px compact row height and solid black borders across all rows.
  */
-function standardizeFormatting() {
+function restoreBlueLinksAndFormat() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Twitter Complaint List');
   if (!sheet) {
@@ -45,79 +38,90 @@ function standardizeFormatting() {
   }
 
   const lastRow = sheet.getLastRow();
+  if (lastRow < 3) return;
+  const numDataRows = lastRow - 2;
   const lastCol = Math.max(sheet.getLastColumn(), 32);
 
-  // 1. Ensure Header (Row 1)
-  sheet.setRowHeight(1, 66);
-  const headerRange = sheet.getRange(1, 1, 1, lastCol);
-  headerRange.setFontFamily('Verdana').setFontSize(13).setFontWeight('bold')
-    .setBackground('#4DD0E1').setFontColor('#1A2F40')
-    .setHorizontalAlignment('center').setVerticalAlignment('middle')
-    .setWrap(true)
+  // 1. Format general cells (Verdana 10pt, vertical middle, solid black border, 22px height)
+  const dataRange = sheet.getRange(3, 1, numDataRows, lastCol);
+  dataRange.setFontFamily('Verdana')
+    .setFontSize(10)
+    .setFontWeight('normal')
+    .setVerticalAlignment('middle')
+    .setHorizontalAlignment('center')
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP)
     .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
 
-  // 2. Ensure Counter (Row 2)
-  sheet.setRowHeight(2, 33);
-  const counterRange = sheet.getRange(2, 1, 1, lastCol);
-  counterRange.setFontFamily('Verdana').setFontSize(11).setFontWeight('bold')
-    .setBackground('#4DD0E1').setFontColor('#1A2F40')
-    .setHorizontalAlignment('center').setVerticalAlignment('middle')
-    .setWrap(false)
-    .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  // Set non-link text color to black
+  sheet.getRange(3, 1, numDataRows, 4).setFontColor('#000000'); // Cols A-D
+  sheet.getRange(3, 6, numDataRows, lastCol - 5).setFontColor('#000000'); // Cols F onwards
 
-  // 3. Ensure Frozen Top 2 Rows
-  sheet.setFrozenRows(2);
+  // Set uniform compact row height (22px)
+  for (let r = 3; r <= lastRow; r++) {
+    sheet.setRowHeight(r, 22);
+  }
 
-  // 4. Format All Data Rows (Row 3 to lastRow)
-  if (lastRow >= 3) {
-    const numDataRows = lastRow - 2;
-    const dataRange = sheet.getRange(3, 1, numDataRows, lastCol);
-    
-    // Set uniform font, alignment, borders, and CLIP wrap
-    dataRange.setFontFamily('Verdana');
-    dataRange.setFontSize(10);
-    dataRange.setFontWeight('normal');
-    dataRange.setFontColor('#000000');
-    dataRange.setVerticalAlignment('middle');
-    dataRange.setHorizontalAlignment('center');
-    dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-    dataRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  // 2. Restore Column E (LINK URL) as native blue (#1155cc) underlined clickable links
+  const urlRange = sheet.getRange(3, 5, numDataRows, 1);
+  const urlValues = urlRange.getValues();
+  const linkStyle = SpreadsheetApp.newTextStyle()
+    .setForegroundColor('#1155cc')
+    .setUnderline(true)
+    .setFontFamily('Verdana')
+    .setFontSize(10)
+    .build();
 
-    // Set uniform compact row height (22px) for every data row
-    for (let r = 3; r <= lastRow; r++) {
-      sheet.setRowHeight(r, 22);
+  const richTextValues = [];
+  for (let i = 0; i < urlValues.length; i++) {
+    const rawUrl = String(urlValues[i][0] || '').trim();
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      const rich = SpreadsheetApp.newRichTextValue()
+        .setText(rawUrl)
+        .setLinkUrl(rawUrl)
+        .setTextStyle(linkStyle)
+        .build();
+      richTextValues.push([rich]);
+    } else {
+      richTextValues.push([SpreadsheetApp.newRichTextValue().setText(rawUrl).build()]);
     }
+  }
+  urlRange.setRichTextValues(richTextValues);
+  urlRange.setHorizontalAlignment('left');
 
-    // Align left for long text columns
-    sheet.getRange(3, 5, numDataRows, 1).setHorizontalAlignment('left'); // Column E (LINK URL)
-    if (lastCol >= 21) {
-      sheet.getRange(3, 21, numDataRows, 1).setHorizontalAlignment('left'); // Column U (Post Text)
-    }
-    if (lastCol >= 27) {
-      sheet.getRange(3, 27, numDataRows, 1).setHorizontalAlignment('left'); // Column AA (Suggested Reply Draft)
-    }
+  // Left-align text columns
+  if (lastCol >= 21) {
+    sheet.getRange(3, 21, numDataRows, 1).setHorizontalAlignment('left'); // Post Text
+  }
+  if (lastCol >= 27) {
+    sheet.getRange(3, 27, numDataRows, 1).setHorizontalAlignment('left'); // Reply Draft
   }
 
   SpreadsheetApp.flush();
   try {
-    SpreadsheetApp.getUi().alert('Format successfully standardized across all rows (Row 3 onwards now match Rows 10-18)!');
+    SpreadsheetApp.getUi().alert('All URLs restored to blue clickable links with uniform 22px row formatting!');
   } catch (e) {
-    // If called via webhook without UI, ignore alert
+    // Ignore alert if executed from background
   }
 }
 
 /**
+ * Standardize formatting and restore blue links.
+ */
+function standardizeFormatting() {
+  restoreBlueLinksAndFormat();
+}
+
+/**
  * Webhook receiver that inserts complaints from the Python monitoring engine.
- * Deploy as Web App: Extensions -> Apps Script -> Deploy -> Manage deployments -> Edit -> New version
  */
 function doPost(e) {
   try {
     const contents = JSON.parse(e.postData.contents);
     
-    // Support remote action: standardize_format
-    if (contents.action === 'standardize_format') {
-      standardizeFormatting();
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', action: 'standardize_format' }))
+    // Support remote action: restore_links
+    if (contents.action === 'restore_links' || contents.action === 'standardize_format') {
+      restoreBlueLinksAndFormat();
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', action: contents.action }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -143,13 +147,32 @@ function doPost(e) {
     range.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
     range.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
 
-    // Set uniform compact row height (22px)
+    // Uniform 22px row height
     for (let i = 0; i < rows.length; i++) {
       sheet.setRowHeight(startRow + i, 22);
     }
 
-    // Left-align URLs and text
-    sheet.getRange(startRow, 5, rows.length, 1).setHorizontalAlignment('left');
+    // Format Column E as blue clickable link
+    const linkStyle = SpreadsheetApp.newTextStyle()
+      .setForegroundColor('#1155cc')
+      .setUnderline(true)
+      .setFontFamily('Verdana')
+      .setFontSize(10)
+      .build();
+
+    const linkRichText = [];
+    for (let i = 0; i < rows.length; i++) {
+      const urlStr = String(rows[i][4] || '').trim();
+      if (urlStr.startsWith('http')) {
+        linkRichText.push([SpreadsheetApp.newRichTextValue().setText(urlStr).setLinkUrl(urlStr).setTextStyle(linkStyle).build()]);
+      } else {
+        linkRichText.push([SpreadsheetApp.newRichTextValue().setText(urlStr).build()]);
+      }
+    }
+    const linkRange = sheet.getRange(startRow, 5, rows.length, 1);
+    linkRange.setRichTextValues(linkRichText);
+    linkRange.setHorizontalAlignment('left');
+
     if (rows[0].length >= 21) {
       sheet.getRange(startRow, 21, rows.length, 1).setHorizontalAlignment('left');
     }
