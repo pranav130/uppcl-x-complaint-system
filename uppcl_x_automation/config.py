@@ -74,6 +74,24 @@ class AppConfig:
     reply_templates: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
 
+def _sanitize_url(url: Optional[str]) -> Optional[str]:
+    """Clean URLs by removing accidental leading/trailing strings or booleans."""
+    if not url:
+        return url
+    u = url.strip()
+    # Strip accidental prepended values like 'falsehttps://' or quotes
+    u = u.strip("\"'")
+    if u.lower().startswith("falsehttp://"):
+        u = "http://" + u[12:]
+    elif u.lower().startswith("falsehttps://"):
+        u = "https://" + u[13:]
+    elif u.lower().startswith("truehttp://"):
+        u = "http://" + u[11:]
+    elif u.lower().startswith("truehttps://"):
+        u = "https://" + u[12:]
+    return u
+
+
 def load_config(config_path: Optional[str] = None, env_path: Optional[str] = None) -> AppConfig:
     """Load configuration from YAML and environment variables."""
     # Find base directory
@@ -170,7 +188,7 @@ def load_config(config_path: Optional[str] = None, env_path: Optional[str] = Non
         x_access_token=os.getenv("X_ACCESS_TOKEN"),
         x_access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET"),
         google_service_account_file=os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"),
-        google_webhook_url=os.getenv("GOOGLE_WEBHOOK_URL") or sys_yaml.get("google_webhook_url"),
+        google_webhook_url=_sanitize_url(os.getenv("GOOGLE_WEBHOOK_URL") or sys_yaml.get("google_webhook_url")),
         google_spreadsheet_id=os.getenv("GOOGLE_SPREADSHEET_ID", "12smJ_xw3sRWPcCzDsh_hC44ac2NlpO9I_wDnXF-wFXU"),
         google_sheet_tab_name=os.getenv("GOOGLE_SHEET_TAB_NAME", "Twitter Complaint List"),
         sqlite_db_path=os.getenv("SQLITE_DB_PATH", "data/uppcl_monitor.db"),
