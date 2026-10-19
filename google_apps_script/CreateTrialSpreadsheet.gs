@@ -2,7 +2,8 @@
  * ==============================================================================
  * 1-Click Trial Spreadsheet Generator for UPPCL X Complaint Monitoring
  * Run this function in Google Apps Script (https://script.google.com)
- * It creates a brand new standalone Google Spreadsheet in your Google Drive.
+ * It creates a brand new standalone Google Spreadsheet in your Google Drive
+ * matching the EXACT format, colors, fonts, and formulas of the original sheet.
  * ==============================================================================
  */
 
@@ -33,12 +34,43 @@ function createTrialSpreadsheet() {
     'Reply Post ID', 'Reply Post URL', 'Reply Posted At', 'Processing Status', 'Last Error'
   ];
 
-  // Set Row 9 Headers
-  mainSheet.getRange(9, 1, 1, headers.length).setValues([headers]);
-  mainSheet.getRange(9, 1, 1, 19).setFontWeight('bold').setBackground('#1A73E8').setFontColor('#FFFFFF');
-  mainSheet.getRange(9, 20, 1, headers.length - 19).setFontWeight('bold').setBackground('#0D652D').setFontColor('#FFFFFF');
+  const colCount = headers.length;
 
-  // Insert Sample Verified Complaint Rows
+  // Row 1: Cyan Headers (#4DD0E1, Verdana 13pt bold, dark #1A2F40)
+  const headerRange = mainSheet.getRange(1, 1, 1, colCount);
+  headerRange.setValues([headers]);
+  headerRange.setFontFamily('Verdana');
+  headerRange.setFontSize(13);
+  headerRange.setFontWeight('bold');
+  headerRange.setFontColor('#1A2F40');
+  headerRange.setBackground('#4DD0E1');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setVerticalAlignment('middle');
+  headerRange.setWrap(true);
+  headerRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  mainSheet.setRowHeight(1, 66);
+
+  // Row 2: Counter / Formula Row
+  const counterValues = new Array(colCount).fill('');
+  counterValues[4] = '=COUNTA(E3:E)';
+  counterValues[3] = '=COUNTIF(D3:D, ">=1")';
+
+  const counterRange = mainSheet.getRange(2, 1, 1, colCount);
+  counterRange.setValues([counterValues]);
+  counterRange.setFontFamily('Verdana');
+  counterRange.setFontSize(11);
+  counterRange.setFontWeight('bold');
+  counterRange.setFontColor('#1A2F40');
+  counterRange.setBackground('#4DD0E1');
+  counterRange.setHorizontalAlignment('center');
+  counterRange.setVerticalAlignment('middle');
+  counterRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  mainSheet.setRowHeight(2, 33);
+
+  // Freeze top 2 rows
+  mainSheet.setFrozenRows(2);
+
+  // Row 3+: Sample Verified Complaint Rows
   const sampleData = [
     [
       '19-10-2026', 'MORNING', 'MORNING', '1',
@@ -78,8 +110,35 @@ function createTrialSpreadsheet() {
     ]
   ];
 
-  mainSheet.getRange(11, 1, sampleData.length, headers.length).setValues(sampleData);
-  mainSheet.autoResizeColumns(1, headers.length);
+  const dataRange = mainSheet.getRange(3, 1, sampleData.length, colCount);
+  dataRange.setValues(sampleData);
+  dataRange.setFontFamily('Verdana');
+  dataRange.setFontSize(10);
+  dataRange.setHorizontalAlignment('center');
+  dataRange.setVerticalAlignment('middle');
+  dataRange.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+  mainSheet.getRange(3, 5, sampleData.length, 1).setHorizontalAlignment('left');
+  mainSheet.getRange(3, 21, sampleData.length, 1).setHorizontalAlignment('left');
+  mainSheet.getRange(3, 27, sampleData.length, 1).setHorizontalAlignment('left');
+
+  // Set column widths
+  mainSheet.setColumnWidth(1, 110);
+  mainSheet.setColumnWidth(2, 110);
+  mainSheet.setColumnWidth(3, 110);
+  mainSheet.setColumnWidth(4, 50);
+  mainSheet.setColumnWidth(5, 340);
+  mainSheet.setColumnWidth(6, 170);
+  mainSheet.setColumnWidth(7, 80);
+  mainSheet.setColumnWidth(8, 90);
+  mainSheet.setColumnWidth(9, 100);
+  mainSheet.setColumnWidth(10, 160);
+  mainSheet.setColumnWidth(11, 100);
+  mainSheet.setColumnWidth(12, 130);
+  mainSheet.setColumnWidth(13, 130);
+  mainSheet.setColumnWidth(14, 250);
+  mainSheet.setColumnWidth(15, 150);
+  mainSheet.setColumnWidth(21, 380);
+  mainSheet.setColumnWidth(27, 380);
 
   // 3. Setup 'Settings' Tab
   const settingsSheet = ss.insertSheet('Settings');
@@ -93,7 +152,8 @@ function createTrialSpreadsheet() {
     ['MONITORED_APEX', '@UPPCLLKO, @EMofficeUP, @AKSharmaOffice, @aksharmaBharat, @ChairmanUppcl, @mduppcl', 'Monitored accounts.']
   ];
   settingsSheet.getRange(1, 1, settingsData.length, 3).setValues(settingsData);
-  settingsSheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#E8EAED');
+  settingsSheet.getRange(1, 1, 1, 3).setFontFamily('Verdana').setFontWeight('bold').setBackground('#4DD0E1').setFontColor('#1A2F40');
+  settingsSheet.getRange(1, 1, settingsData.length, 3).setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
   settingsSheet.autoResizeColumns(1, 3);
 
   // 4. Setup 'Dashboard' Tab
@@ -101,19 +161,20 @@ function createTrialSpreadsheet() {
   const dashData = [
     ['UPPCL X COMPLAINT MONITORING DASHBOARD (TRIAL)', '', '', ''],
     ['Metric', 'Value', 'Formula / Source', 'Notes'],
-    ['Total Complaints Recorded', '=COUNTA(\'Twitter Complaint List\'!E11:E)', 'Active post links count', ''],
-    ['Outage Complaints', '=COUNTIF(\'Twitter Complaint List\'!J11:J, "SUPPLY_OUTAGE")', 'SUPPLY_OUTAGE', ''],
-    ['Transformer Damaged', '=COUNTIF(\'Twitter Complaint List\'!J11:J, "TRANSFORMER_DAMAGE")', 'TRANSFORMER_DAMAGE', ''],
-    ['Billing Issues', '=COUNTIF(\'Twitter Complaint List\'!J11:J, "BILL_RELATED")', 'BILL_RELATED', ''],
-    ['MVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K11:K, "MVVNL")', 'Central UP', ''],
-    ['PVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K11:K, "PVVNL")', 'Western UP', ''],
-    ['PuVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K11:K, "PuVVNL")', 'Eastern UP', ''],
-    ['DVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K11:K, "DVVNL")', 'Southern UP', ''],
-    ['KESCo Assigned', '=COUNTIF(\'Twitter Complaint List\'!K11:K, "KESCO")', 'Kanpur City', '']
+    ['Total Complaints Recorded', '=COUNTA(\'Twitter Complaint List\'!E3:E)', 'Active post links count', ''],
+    ['Outage Complaints', '=COUNTIF(\'Twitter Complaint List\'!J3:J, "SUPPLY_OUTAGE")', 'SUPPLY_OUTAGE', ''],
+    ['Transformer Damaged', '=COUNTIF(\'Twitter Complaint List\'!J3:J, "TRANSFORMER_DAMAGE")', 'TRANSFORMER_DAMAGE', ''],
+    ['Billing Issues', '=COUNTIF(\'Twitter Complaint List\'!J3:J, "BILL_RELATED")', 'BILL_RELATED', ''],
+    ['MVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "MVVNL")', 'Central UP', ''],
+    ['PVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "PVVNL")', 'Western UP', ''],
+    ['PuVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "PuVVNL")', 'Eastern UP', ''],
+    ['DVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "DVVNL")', 'Southern UP', ''],
+    ['KESCo Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "KESCO")', 'Kanpur City', '']
   ];
   dashSheet.getRange(1, 1, dashData.length, 4).setValues(dashData);
-  dashSheet.getRange(1, 1, 1, 4).merge().setFontWeight('bold').setFontSize(14).setBackground('#1A73E8').setFontColor('#FFFFFF');
-  dashSheet.getRange(2, 1, 1, 4).setFontWeight('bold').setBackground('#E8EAED');
+  dashSheet.getRange(1, 1, 1, 4).merge().setFontFamily('Verdana').setFontWeight('bold').setFontSize(14).setBackground('#4DD0E1').setFontColor('#1A2F40').setHorizontalAlignment('center');
+  dashSheet.getRange(2, 1, 1, 4).setFontFamily('Verdana').setFontWeight('bold').setBackground('#4DD0E1').setFontColor('#1A2F40');
+  dashSheet.getRange(1, 1, dashData.length, 4).setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
   dashSheet.autoResizeColumns(1, 4);
 
   return { url: url, id: id };
