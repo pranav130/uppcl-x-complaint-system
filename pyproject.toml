@@ -18,6 +18,7 @@ dependencies = [
     "google-auth-oauthlib>=1.1.0",
     "pyyaml>=6.0.1",
     "python-dotenv>=1.0.0",
+    "openpyxl>=3.1.2",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,9 @@ dev = [
 
 [project.scripts]
 uppcl-monitor = "uppcl_x_automation.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["uppcl_x_automation*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

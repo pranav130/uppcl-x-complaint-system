@@ -1,0 +1,2 @@
+[console_scripts]
+uppcl-monitor = uppcl_x_automation.cli:main
