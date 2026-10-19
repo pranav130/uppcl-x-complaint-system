@@ -249,11 +249,65 @@ function fixMisclassifiedComplaints() {
 }
 
 /**
- * Webhook receiver that inserts complaints from the Python monitoring engine.
+ * Webhook receiver that serves live spreadsheet data to the analytics dashboard
+ * and accepts incoming complaints from the monitoring engine.
  */
+function doGet(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Twitter Complaint List');
+    if (!sheet) {
+      const sheets = ss.getSheets();
+      for (let s of sheets) {
+        if (String(s.getSheetId()) === '598922870') {
+          sheet = s;
+          break;
+        }
+      }
+    }
+    if (!sheet) sheet = ss.getActiveSheet();
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = Math.max(sheet.getLastColumn(), 32);
+
+    if (lastRow < 3) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'ok',
+        sheetTitle: sheet.getName(),
+        gid: sheet.getSheetId(),
+        totalRows: 0,
+        headers: [],
+        data: [],
+        lastUpdated: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    const data = sheet.getRange(3, 1, lastRow - 2, lastCol).getValues();
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'ok',
+      sheetTitle: sheet.getName(),
+      gid: sheet.getSheetId(),
+      totalRows: data.length,
+      headers: headers,
+      data: data,
+      lastUpdated: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 function doPost(e) {
   try {
     const contents = JSON.parse(e.postData.contents);
+    if (contents.action === 'get_complaints' || contents.action === 'read_all') {
+      return doGet(e);
+    }
     if (contents.action === 'restore_links' || contents.action === 'apply_original_format') {
       applyOriginalFormatting();
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', action: contents.action }))
