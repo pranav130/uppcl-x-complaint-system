@@ -12,8 +12,8 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('UPPCL Automation')
-    .addItem('Restore Blue Clickable Links & Format', 'restoreBlueLinksAndFormat')
-    .addItem('Standardize All Row Formats', 'standardizeFormatting')
+    .addItem('Apply Original Formatting (Blue Links & 45px Rows)', 'applyOriginalFormatting')
+    .addItem('Make Rows Compact (22px)', 'makeRowsCompact')
     .addSeparator()
     .addItem('Review Pending Drafts', 'highlightPendingDrafts')
     .addItem('Approve Selected Rows', 'approveSelectedRows')
@@ -27,10 +27,10 @@ function onOpen() {
 }
 
 /**
- * Restores Column E (and Column 29) to native Google Sheets blue clickable hyperlinks
- * and applies uniform 22px compact row height and solid black borders across all rows.
+ * Applies the original comfortable row height (45px) with text wrapping
+ * and restores Column E as blue clickable hyperlinks (#1155cc, underlined).
  */
-function restoreBlueLinksAndFormat() {
+function applyOriginalFormatting() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Twitter Complaint List');
   if (!sheet) {
@@ -42,26 +42,45 @@ function restoreBlueLinksAndFormat() {
   const numDataRows = lastRow - 2;
   const lastCol = Math.max(sheet.getLastColumn(), 32);
 
-  // 1. Format general cells (Verdana 10pt, vertical middle, solid black border, 22px height)
+  // 1. Row 1 Header (66px, #4DD0E1 Cyan, Verdana 13pt bold)
+  sheet.setRowHeight(1, 66);
+  sheet.getRange(1, 1, 1, lastCol)
+    .setFontFamily('Verdana').setFontSize(13).setFontWeight('bold')
+    .setBackground('#4DD0E1').setFontColor('#1A2F40')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle')
+    .setWrap(true)
+    .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+
+  // 2. Row 2 Counter (33px, #4DD0E1 Cyan, Verdana 11pt bold)
+  sheet.setRowHeight(2, 33);
+  sheet.getRange(2, 1, 1, lastCol)
+    .setFontFamily('Verdana').setFontSize(11).setFontWeight('bold')
+    .setBackground('#4DD0E1').setFontColor('#1A2F40')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle')
+    .setWrap(false)
+    .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+
+  sheet.setFrozenRows(2);
+
+  // 3. Set all data rows to 45px height with text wrapping
+  for (let r = 3; r <= lastRow; r++) {
+    sheet.setRowHeight(r, 45);
+  }
+
   const dataRange = sheet.getRange(3, 1, numDataRows, lastCol);
   dataRange.setFontFamily('Verdana')
     .setFontSize(10)
     .setFontWeight('normal')
     .setVerticalAlignment('middle')
     .setHorizontalAlignment('center')
-    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP)
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP)
     .setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
 
-  // Set non-link text color to black
-  sheet.getRange(3, 1, numDataRows, 4).setFontColor('#000000'); // Cols A-D
-  sheet.getRange(3, 6, numDataRows, lastCol - 5).setFontColor('#000000'); // Cols F onwards
+  // Set standard columns font color to black
+  sheet.getRange(3, 1, numDataRows, 4).setFontColor('#000000');
+  sheet.getRange(3, 6, numDataRows, lastCol - 5).setFontColor('#000000');
 
-  // Set uniform compact row height (22px)
-  for (let r = 3; r <= lastRow; r++) {
-    sheet.setRowHeight(r, 22);
-  }
-
-  // 2. Restore Column E (LINK URL) as native blue (#1155cc) underlined clickable links
+  // 4. Restore Column E (LINK URL) as native blue (#1155cc) underlined clickable links
   const urlRange = sheet.getRange(3, 5, numDataRows, 1);
   const urlValues = urlRange.getValues();
   const linkStyle = SpreadsheetApp.newTextStyle()
@@ -90,25 +109,31 @@ function restoreBlueLinksAndFormat() {
 
   // Left-align text columns
   if (lastCol >= 21) {
-    sheet.getRange(3, 21, numDataRows, 1).setHorizontalAlignment('left'); // Post Text
+    sheet.getRange(3, 21, numDataRows, 1).setHorizontalAlignment('left');
   }
   if (lastCol >= 27) {
-    sheet.getRange(3, 27, numDataRows, 1).setHorizontalAlignment('left'); // Reply Draft
+    sheet.getRange(3, 27, numDataRows, 1).setHorizontalAlignment('left');
   }
 
   SpreadsheetApp.flush();
-  try {
-    SpreadsheetApp.getUi().alert('All URLs restored to blue clickable links with uniform 22px row formatting!');
-  } catch (e) {
-    // Ignore alert if executed from background
-  }
 }
 
 /**
- * Standardize formatting and restore blue links.
+ * Optional alternative: Compact 22px row height with blue links.
  */
-function standardizeFormatting() {
-  restoreBlueLinksAndFormat();
+function makeRowsCompact() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Twitter Complaint List');
+  if (!sheet) sheet = ss.getActiveSheet();
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 3) return;
+
+  for (let r = 3; r <= lastRow; r++) {
+    sheet.setRowHeight(r, 22);
+  }
+  sheet.getRange(3, 1, lastRow - 2, sheet.getLastColumn()).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+  SpreadsheetApp.flush();
 }
 
 /**
@@ -117,10 +142,8 @@ function standardizeFormatting() {
 function doPost(e) {
   try {
     const contents = JSON.parse(e.postData.contents);
-    
-    // Support remote action: restore_links
-    if (contents.action === 'restore_links' || contents.action === 'standardize_format') {
-      restoreBlueLinksAndFormat();
+    if (contents.action === 'restore_links' || contents.action === 'apply_original_format') {
+      applyOriginalFormatting();
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', action: contents.action }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -144,15 +167,15 @@ function doPost(e) {
     range.setFontSize(10);
     range.setHorizontalAlignment('center');
     range.setVerticalAlignment('middle');
-    range.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    range.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
     range.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
 
-    // Uniform 22px row height
+    // Set row height to 45px matching original format
     for (let i = 0; i < rows.length; i++) {
-      sheet.setRowHeight(startRow + i, 22);
+      sheet.setRowHeight(startRow + i, 45);
     }
 
-    // Format Column E as blue clickable link
+    // Set Column E as blue clickable link
     const linkStyle = SpreadsheetApp.newTextStyle()
       .setForegroundColor('#1155cc')
       .setUnderline(true)
@@ -189,13 +212,31 @@ function doPost(e) {
   }
 }
 
-/**
- * Initializes supporting tabs (Settings, Dashboard, Processing Log)
- */
+function engageEmergencyStop() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settings = ss.getSheetByName('Settings');
+  if (settings) {
+    settings.getRange(2, 2).setValue('TRUE');
+    SpreadsheetApp.getUi().alert('EMERGENCY STOP ENGAGED: Automated posting and sync halted.');
+  }
+}
+
+function releaseEmergencyStop() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settings = ss.getSheetByName('Settings');
+  if (settings) {
+    settings.getRange(2, 2).setValue('FALSE');
+    SpreadsheetApp.getUi().alert('EMERGENCY STOP RELEASED: System returned to normal operating mode.');
+  }
+}
+
+function refreshDashboard() {
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('Dashboard metrics refreshed.');
+}
+
 function setupSupportingTabs() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // 1. Settings Tab
   let settingsSheet = ss.getSheetByName('Settings');
   if (!settingsSheet) {
     settingsSheet = ss.insertSheet('Settings');
@@ -212,47 +253,8 @@ function setupSupportingTabs() {
     settingsSheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#4DD0E1').setFontColor('#1A2F40');
     settingsSheet.autoResizeColumns(1, 3);
   }
-
-  // 2. Processing Log Tab
-  let logSheet = ss.getSheetByName('Processing Log');
-  if (!logSheet) {
-    logSheet = ss.insertSheet('Processing Log');
-    const logHeaders = [['TIMESTAMP (IST)', 'EVENT_TYPE', 'POSTS_FETCHED', 'COMPLAINTS_FOUND', 'DRAFTS_READY', 'REPLIES_POSTED', 'ERRORS', 'STATUS']];
-    logSheet.getRange(1, 1, 1, logHeaders[0].length).setValues(logHeaders);
-    logSheet.getRange(1, 1, 1, logHeaders[0].length).setFontWeight('bold').setBackground('#4DD0E1').setFontColor('#1A2F40');
-    logSheet.autoResizeColumns(1, logHeaders[0].length);
-  }
-
-  // 3. Dashboard Tab
-  let dashSheet = ss.getSheetByName('Dashboard');
-  if (!dashSheet) {
-    dashSheet = ss.insertSheet('Dashboard');
-    const dashData = [
-      ['UPPCL X COMPLAINT MONITORING DASHBOARD', '', '', ''],
-      ['Metric', 'Value', 'Formula / Source', 'Notes'],
-      ['Total Complaints Recorded', '=COUNTA(\'Twitter Complaint List\'!E3:E)', 'Active post links count', ''],
-      ['Outage Complaints', '=COUNTIF(\'Twitter Complaint List\'!J3:J, "SUPPLY_OUTAGE")', 'SUPPLY_OUTAGE', ''],
-      ['Transformer Damaged', '=COUNTIF(\'Twitter Complaint List\'!J3:J, "TRANSFORMER_DAMAGE")', 'TRANSFORMER_DAMAGE', ''],
-      ['Billing Issues', '=COUNTIF(\'Twitter Complaint List\'!J3:J, "BILL_RELATED")', 'BILL_RELATED', ''],
-      ['Safety Hazards / Broken Poles', '=COUNTIF(\'Twitter Complaint List\'!J3:J, "POLE_WIRE_HAZARD")', 'High priority', ''],
-      ['MVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "MVVNL")', 'Central UP', ''],
-      ['PVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "PVVNL")', 'Western UP', ''],
-      ['PuVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "PuVVNL")', 'Eastern UP', ''],
-      ['DVVNL Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "DVVNL")', 'Southern UP', ''],
-      ['KESCo Assigned', '=COUNTIF(\'Twitter Complaint List\'!K3:K, "KESCO")', 'Kanpur City', '']
-    ];
-    dashSheet.getRange(1, 1, dashData.length, 4).setValues(dashData);
-    dashSheet.getRange(1, 1, 1, 4).merge().setFontWeight('bold').setFontSize(14).setBackground('#4DD0E1').setFontColor('#1A2F40').setHorizontalAlignment('center');
-    dashSheet.getRange(2, 1, 1, 4).setFontWeight('bold').setBackground('#4DD0E1').setFontColor('#1A2F40');
-    dashSheet.autoResizeColumns(1, 4);
-  }
-
-  SpreadsheetApp.getUi().alert('Supporting tabs (Settings, Processing Log, Dashboard) verified and ready.');
 }
 
-/**
- * Highlights rows with ready drafts in soft yellow for review.
- */
 function highlightPendingDrafts() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   if (sheet.getName() !== 'Twitter Complaint List') {
@@ -263,7 +265,7 @@ function highlightPendingDrafts() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 3) return;
 
-  const approvalCol = 28; // Column AB (Reply Approval Status)
+  const approvalCol = 28;
   const range = sheet.getRange(3, 1, lastRow - 2, sheet.getLastColumn());
   const values = range.getValues();
 
@@ -279,9 +281,6 @@ function highlightPendingDrafts() {
   SpreadsheetApp.getUi().alert('Found ' + count + ' complaint row(s) with drafts pending review.');
 }
 
-/**
- * Approves selected rows for publishing.
- */
 function approveSelectedRows() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   if (sheet.getName() !== 'Twitter Complaint List') {
@@ -305,27 +304,4 @@ function approveSelectedRows() {
   }
 
   SpreadsheetApp.getUi().alert('Marked ' + numRows + ' row(s) as APPROVED.');
-}
-
-function engageEmergencyStop() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const settings = ss.getSheetByName('Settings');
-  if (settings) {
-    settings.getRange(2, 2).setValue('TRUE');
-    SpreadsheetApp.getUi().alert('EMERGENCY STOP ENGAGED: Automated posting and sync halted.');
-  }
-}
-
-function releaseEmergencyStop() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const settings = ss.getSheetByName('Settings');
-  if (settings) {
-    settings.getRange(2, 2).setValue('FALSE');
-    SpreadsheetApp.getUi().alert('EMERGENCY STOP RELEASED: System returned to normal operating mode.');
-  }
-}
-
-function refreshDashboard() {
-  SpreadsheetApp.flush();
-  SpreadsheetApp.getUi().alert('Dashboard metrics refreshed.');
 }
