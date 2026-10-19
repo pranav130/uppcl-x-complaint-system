@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+logs/*.log
+*.db-wal
+*.db-shm
+.env
+.DS_Store
+Thumbs.db

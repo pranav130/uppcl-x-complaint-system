@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  uppcl-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uppcl-complaint-daemon
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DRY_RUN=false
+      - AUTO_POST_ENABLED=false
+      - POLLING_INTERVAL_MINUTES=5
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+volumes:
+  uppcl_data:
+  uppcl_logs:

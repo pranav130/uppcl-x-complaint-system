@@ -1,0 +1,33 @@
+services:
+  - type: worker
+    name: uppcl-complaint-daemon
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: singapore # Closest to India
+    autoDeploy: true
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: DRY_RUN
+        value: "false"
+      - key: AUTO_POST_ENABLED
+        value: "false"
+      - key: POLLING_INTERVAL_MINUTES
+        value: "5"
+      - key: GOOGLE_SPREADSHEET_ID
+        value: "10_210Ynr_F0Pj1Yov_pqjVZ1kaYIEWrbGF1jn16sgNY"
+      - key: GOOGLE_SHEET_TAB_NAME
+        value: "Twitter Complaint List"
+      - key: X_BEARER_TOKEN
+        sync: false
+      - key: X_API_KEY
+        sync: false
+      - key: X_API_SECRET
+        sync: false
+      - key: X_ACCESS_TOKEN
+        sync: false
+      - key: X_ACCESS_TOKEN_SECRET
+        sync: false
+      - key: GOOGLE_WEBHOOK_URL
+        sync: false
