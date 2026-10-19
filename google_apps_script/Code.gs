@@ -13,6 +13,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('UPPCL Automation')
     .addItem('Apply Original Formatting (Blue Links & 45px Rows)', 'applyOriginalFormatting')
+    .addItem('Fix Misclassified Appreciation Rows', 'fixMisclassifiedComplaints')
     .addItem('Make Rows Compact (22px)', 'makeRowsCompact')
     .addSeparator()
     .addItem('Review Pending Drafts', 'highlightPendingDrafts')
@@ -137,6 +138,67 @@ function makeRowsCompact() {
 }
 
 /**
+ * Scans all rows in 'Twitter Complaint List' and corrects any official DISCOM replies,
+ * trailing thread updates, or citizen requests that were incorrectly marked as APPRECIATION.
+ */
+function fixMisclassifiedComplaints() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Twitter Complaint List');
+  if (!sheet) sheet = ss.getActiveSheet();
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 3) return 0;
+
+  const numRows = lastRow - 2;
+  const lastCol = Math.max(sheet.getLastColumn(), 32);
+  const dataRange = sheet.getRange(3, 1, numRows, lastCol);
+  const values = dataRange.getValues();
+
+  const officialHandles = [
+    'uppcllko', 'mduppcl', 'chairmanuppcl', 'emofficeup', 'aksharmaoffice', 'aksharmabharat',
+    'pvvnlhq', '1912pvvnl', 'pvvnl', 'dvvnlhq', 'dvvnl_care', 'puvvnlhq', 'puvvnl',
+    'kescohq', 'skescokanpur', '1912kesco', 'mvvnlhq', 'mvvnlmd', 'madhyanchalv', 'zoneamausi'
+  ];
+
+  let correctedCount = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const twitterId = String(row[5] || '').toLowerCase().replace('@', '').trim();
+    const pickedStatus = String(row[8] || '').trim().toUpperCase();
+    const fullText = (String(row[20] || '') + ' ' + String(row[4] || '')).toLowerCase();
+
+    const isOfficial = officialHandles.some(h => twitterId.includes(h)) ||
+                       twitterId.startsWith('1912') ||
+                       twitterId.endsWith('hq') ||
+                       twitterId.endsWith('care');
+
+    const hasReplyOrComplaintMarkers = /प्रिय\s*उपभोक्ता|प्रिय\s*ग्राहक|काम\s*चल\s*रहा|पूर्व\s*में\s*दर्ज|शिकायत\s*संख्या|1912|संबंधित\s*अधिकारी|समाधान\s*कर\s*दिया|previously\s*lodged|work\s*is\s*going|अनुरोध|ots|बकाया|तार|पोल|खंभा/i.test(fullText);
+
+    // If marked APPRECIATION but is an official handle or official reply:
+    if (pickedStatus === 'APPRECIATION' && (isOfficial || hasReplyOrComplaintMarkers)) {
+      const rowIndex = i + 3;
+      sheet.getRange(rowIndex, 9).setValue('YES'); // Picked Status
+      if (!row[9] || String(row[9]).trim() === '') {
+        const compType = (fullText.includes('ots') || fullText.includes('बकाया')) ? 'BILL_RELATED' : 'DISSATISFIED_CONSUMER';
+        sheet.getRange(rowIndex, 10).setValue(compType); // Complaint Type
+      }
+      sheet.getRange(rowIndex, 15).setValue('Forwarded to Discom'); // Status
+      sheet.getRange(rowIndex, 16).setValue('YES'); // Reply within 30 min
+      correctedCount++;
+    }
+  }
+
+  SpreadsheetApp.flush();
+  try {
+    SpreadsheetApp.getUi().alert(`Completed: Corrected ${correctedCount} misclassified complaint rows to 'Picked Status: YES' and 'DISSATISFIED_CONSUMER'.`);
+  } catch (e) {
+    // Webhook execution context without active UI
+  }
+  return correctedCount;
+}
+
+/**
  * Webhook receiver that inserts complaints from the Python monitoring engine.
  */
 function doPost(e) {
@@ -145,6 +207,11 @@ function doPost(e) {
     if (contents.action === 'restore_links' || contents.action === 'apply_original_format') {
       applyOriginalFormatting();
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', action: contents.action }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (contents.action === 'fix_misclassified') {
+      const fixed = fixMisclassifiedComplaints();
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', action: contents.action, fixedCount: fixed }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 

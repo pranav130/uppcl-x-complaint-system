@@ -61,7 +61,7 @@ COMPLAINT_PATTERNS: Dict[str, List[str]] = {
         r"\bbill\b", r"बिल", r"गलत\s*बिल", r"wrong\s*bill", r"भारी\s*बिल", r"extra\s*bill",
         r"high\s*bill", r"overcharge", r"भुगतान", r"payment", r"receipt", r"रसीद",
         r"smart\s*meter\s*recharge", r"surcharge", r"सरचार्ज", r"bill\s*correction",
-        r"बकाया", r"arrears"
+        r"बकाया", r"arrears", r"\bots\b", r"एक\s*मुस्त\s*समाधान"
     ],
     "CONNECTION_NEW": [
         r"नया\s*कनेक्शन", r"new\s*connection", r"झटपट", r"jhatpat", r"connection\s*apply",
@@ -70,7 +70,13 @@ COMPLAINT_PATTERNS: Dict[str, List[str]] = {
     "DISSATISFIED_CONSUMER": [
         r"1912\s*पर\s*कोई\s*सुनवाई\s*नहीं", r"कोई\s*नहीं\s*सुन\s*रहा", r"lineman\s*rude",
         r"je\s*not\s*picking", r"रिश्वत", r"bribe", r"भ्रष्टाचार", r"बार\s*बार\s*शिकायत",
-        r"repeated\s*complaint", r"नो\s*रेस्पॉन्स", r"no\s*response"
+        r"repeated\s*complaint", r"नो\s*रेस्पॉन्स", r"no\s*response",
+        # DISCOM in-progress and follow-up complaint indicators
+        r"काम\s*चल\s*रहा\s*है", r"कार्य\s*प्रगति\s*पर", r"work\s*is\s*going\s*on",
+        r"पूर्व\s*में\s*दर्ज\s*शिकायत", r"previously\s*lodged", r"दर्ज\s*शिकायत",
+        r"शिकायत\s*संख्या", r"complaint\s*(no|number)", r"संबंधित\s*अधिकारी",
+        r"समाधान\s*कर\s*दिया\s*गया\s*है", r"complaint\s*has\s*been\s*resolved",
+        r"\b(PV|DV|MV|PU|KS)\d{8,}\b"
     ],
     "INFO_AND_SUGG": [
         r"जानकारी\s*चाहिए", r"information\s*needed", r"कृपया\s*बताएं", r"helpline\s*number",
@@ -78,10 +84,52 @@ COMPLAINT_PATTERNS: Dict[str, List[str]] = {
     ]
 }
 
-# Appreciation Patterns
-APPRECIATION_PATTERNS = [
-    r"धन्यवाद", r"सराहना", r"बहुत\s*अच्छा\s*काम", r"\bthank\s*you\b", r"\bthanks\b",
-    r"\bkudos\b", r"grateful", r"आभार", r"great\s*work", r"problem\s*solved"
+# Known Official DISCOM and Apex Accounts
+OFFICIAL_HANDLES: Set[str] = {
+    "uppcllko", "mduppcl", "chairmanuppcl", "emofficeup", "aksharmaoffice", "aksharmabharat",
+    "pvvnlhq", "1912pvvnl", "pvvnl", "pvvnlmoradabad", "pvvnlmeerut", "pvvnlnoida",
+    "dvvnlhq", "dvvnl_care", "dvvnlkanpurnagr", "dvvnljalaun2", "dvvnlaligarh", "dvvnlagra",
+    "puvvnlhq", "puvvnl", "puvvnlvaranasi", "puvvnlgorakhpur", "puvvnlprayagraj",
+    "kescohq", "skescokanpur", "1912kesco",
+    "mvvnlhq", "mvvnlmd", "madhyanchalv", "zoneamausi", "gomtinagarzone", "cebareilly1", "mvvnllesatrans"
+}
+
+OFFICIAL_HANDLE_REGEX = re.compile(
+    r"^(uppcl|kesco|pvvnl|dvvnl|puvvnl|mvvnl|1912|emoffice|aksharma|chairman|mduppcl|zone|ce|se|ee|sdohq|lesa)",
+    re.IGNORECASE
+)
+
+# Text Markers Indicating an Official Department Response in a Complaint Thread
+OFFICIAL_REPLY_PATTERNS: List[str] = [
+    r"प्रिय\s*उपभोक्ता", r"प्रिय\s*ग्राहक", r"dear\s*consumer", r"dear\s*customer", r"dear\s*sir",
+    r"काम\s*चल\s*रहा\s*है", r"कार्य\s*प्रगति\s*पर", r"work\s*is\s*going\s*on",
+    r"पूर्व\s*में\s*दर्ज\s*शिकायत", r"previously\s*lodged", r"दर्ज\s*शिकायत",
+    r"शिकायत\s*संख्या", r"complaint\s*(no|number)", r"संबंधित\s*अधिकारी", r"concerned\s*officer",
+    r"1912\s*नम्बर\s*पर\s*संपर्क", r"toll-free\s*number\s*1912", r"टोल[- ]?फ्री\s*नंबर",
+    r"\b(PV|DV|MV|PU|KS)\d{8,}\b",
+    r"#1912\w+", r"#dvvnlhq\w*", r"#PVVNLHQ\w*", r"#GoodGovernance"
+]
+
+# Genuine Citizen Appreciation (Must explicitly express problem resolution or direct team praise)
+GENUINE_APPRECIATION_PATTERNS: List[str] = [
+    r"(समस्या|शिकायत)\s*का\s*(समाधान|निस्तारण)\s*(हो\s*गया|कर\s*दिया|हुआ)",
+    r"बिजली\s*आ\s*गई\s*(है)?", r"लाइट\s*आ\s*गई\s*(है)?", r"power\s*restored", r"light\s*aa\s*gayi",
+    r"काम\s*(हो|कर)\s*गया\s*(है)?", r"कार्य\s*पूर्ण\s*हो\s*गया",
+    r"(problem|complaint|issue|outage|power\s*outage)\s*(is\s*)?(solved|resolved)",
+    r"resolv(ing|ed)\s*(the\s*)?(fuse|complaint|issue|outage|power\s*outage|problem)",
+    r"(great|excellent|superb|fast|quick|good)\s*(work|job|resolution|service|speed)",
+    r"बहुत\s*अच्छा\s*काम", r"त्वरित\s*समाधान", r"शानदार\s*कार्य"
+]
+
+# Request or Complaint Disqualifiers (A post containing these is NOT appreciation even if polite words appear)
+REQUEST_OR_COMPLAINT_INDICATORS: List[str] = [
+    r"अनुरोध", r"निवेदन", r"प्रार्थना", r"कृपा\s*कर", r"कृपया", r"\bplease\b", r"\bplz\b",
+    r"कराएं", r"करवाएं", r"करा\s*दीजिए", r"कीजिए", r"कराओ",
+    r"nahi", r"नहीं", r"fuk", r"फुंक", r"blast", r"धमाका", r"chori", r"चोरी",
+    r"toot", r"टूट", r"kharab", r"खराब", r"pending", r"पेंडिंग", r"लंबित", r"बकाया",
+    r"झूल", r"hanging", r"कब\s*तक", r"सुधार", r"overcharge", r"tripping",
+    r"no\s*power", r"no\s*light", r"no\s*electricity", r"power\s*cut",
+    r"आभारी\s*रहेंगे"
 ]
 
 # Non-Complaint PR / Routine Announcement Patterns
@@ -102,7 +150,9 @@ class GrievanceClassifier:
             compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
             self._compiled_types.append((c_type, compiled))
 
-        self._appreciation_regex = [re.compile(p, re.IGNORECASE) for p in APPRECIATION_PATTERNS]
+        self._compiled_genuine_appreciation = [re.compile(p, re.IGNORECASE) for p in GENUINE_APPRECIATION_PATTERNS]
+        self._compiled_request_or_complaint = [re.compile(p, re.IGNORECASE) for p in REQUEST_OR_COMPLAINT_INDICATORS]
+        self._compiled_official_replies = [re.compile(p, re.IGNORECASE) for p in OFFICIAL_REPLY_PATTERNS]
         self._pr_regex = [re.compile(p, re.IGNORECASE) for p in PR_ANNOUNCEMENT_PATTERNS]
 
     @staticmethod
@@ -163,6 +213,24 @@ class GrievanceClassifier:
             return "upl"
         return "upl"
 
+    @staticmethod
+    def is_official_account(author_username: str) -> bool:
+        """Check if author username belongs to an official DISCOM or apex account."""
+        clean = (author_username or "").strip().lower().lstrip("@")
+        if not clean:
+            return False
+        if clean in OFFICIAL_HANDLES:
+            return True
+        if OFFICIAL_HANDLE_REGEX.match(clean):
+            return True
+        if clean.endswith("hq") or clean.endswith("care"):
+            return True
+        return False
+
+    def is_official_reply_text(self, text: str) -> bool:
+        """Check if post body contains official DISCOM reply/in-progress boilerplate."""
+        return any(r.search(text) for r in self._compiled_official_replies)
+
     def classify(
         self,
         text: str,
@@ -186,27 +254,34 @@ class GrievanceClassifier:
         if not has_monitored_tag:
             untagged = "Untagged"
 
-        # Check for appreciation
-        is_appreciation = any(r.search(text) for r in self._appreciation_regex)
-        has_negative_indicator = bool(re.search(r"(nahi|नहीं|fuk|फुंक|blast|धमाका|chori|चोरी|toot|टूट|kharab|खराब|pending|बकाया)", text, re.IGNORECASE))
-        has_resolution_indicator = bool(re.search(r"(resolv|solved|समाधान|निस्तारण|great work|kudos|बहुत\s*अच्छा)", text, re.IGNORECASE))
-        if is_appreciation and (not has_negative_indicator or has_resolution_indicator):
-            return ClassificationResult(
-                is_complaint=False,
-                picked_status="APPRECIATION",
-                complaint_type="",
-                language=lang,
-                shift=shift,
-                head=head,
-                c_f=previous_complaint_count,
-                untagged_complaint=untagged,
-                confidence=0.95,
-                reason="Consumer expresses appreciation / gratitude.",
-            )
+        # Check if author is official or post contains official reply boilerplate
+        author_is_official = self.is_official_account(author_username)
+        has_official_reply_markers = self.is_official_reply_text(text)
 
-        # Check for PR announcements / non-complaints
+        # 1. Genuine Citizen Appreciation Check
+        # Disqualified if:
+        # - Author is official handle OR post has official reply markers (e.g. DISCOM replying to a consumer)
+        # - Post contains citizen request/complaint markers (e.g. asking for OTS, reporting hanging wire with "धन्यवाद")
+        if not author_is_official and not has_official_reply_markers:
+            has_genuine_appreciation = any(r.search(text) for r in self._compiled_genuine_appreciation)
+            has_request_or_complaint = any(r.search(text) for r in self._compiled_request_or_complaint)
+            if has_genuine_appreciation and not has_request_or_complaint:
+                return ClassificationResult(
+                    is_complaint=False,
+                    picked_status="APPRECIATION",
+                    complaint_type="",
+                    language=lang,
+                    shift=shift,
+                    head=head,
+                    c_f=previous_complaint_count,
+                    untagged_complaint=untagged,
+                    confidence=0.95,
+                    reason="Citizen expresses genuine appreciation for resolved service.",
+                )
+
+        # 2. Check for PR announcements / non-complaints (Must not be an official reply to an active complaint)
         is_pr = any(r.search(text) for r in self._pr_regex)
-        if is_pr and not any(r.search(text) for _, plist in self._compiled_types[:4] for r in plist):
+        if is_pr and not has_official_reply_markers and not any(r.search(text) for _, plist in self._compiled_types[:4] for r in plist):
             return ClassificationResult(
                 is_complaint=False,
                 picked_status="NO",
@@ -220,7 +295,7 @@ class GrievanceClassifier:
                 reason="Identified as promotional news, press release, or routine meeting announcement.",
             )
 
-        # Score complaint categories
+        # 3. Score complaint categories
         matched_types: List[Tuple[str, int]] = []
         for c_type, patterns in self._compiled_types:
             matches = sum(1 for p in patterns if p.search(text))
@@ -245,7 +320,23 @@ class GrievanceClassifier:
                 reason=f"Matched {matched_types[0][1]} pattern(s) for {chosen_type}.",
             )
 
-        # Ambiguous / Unclassified: Contains mentions of apex handles but no recognized complaint keywords
+        # 4. If author is official or post has official reply markers but no specific keyword matched:
+        # It is an official reply in a complaint thread -> default to DISSATISFIED_CONSUMER
+        if author_is_official or has_official_reply_markers:
+            return ClassificationResult(
+                is_complaint=True,
+                picked_status="YES",
+                complaint_type="DISSATISFIED_CONSUMER",
+                language=lang,
+                shift=shift,
+                head=head,
+                c_f=previous_complaint_count,
+                untagged_complaint=untagged,
+                confidence=0.85,
+                reason="Official DISCOM grievance thread reply / in-progress follow-up detected.",
+            )
+
+        # 5. Ambiguous / Unclassified: Contains mentions of apex handles but no recognized complaint keywords
         return ClassificationResult(
             is_complaint=True,  # Retain for human review instead of silently dropping
             picked_status="YES",

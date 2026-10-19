@@ -86,3 +86,50 @@ def test_untagged_complaint_detection(classifier):
     text = "Bijli nahi aa rahi hai subah se"
     res = classifier.classify(text, mentioned_accounts=[])
     assert res.untagged_complaint == "Untagged"
+
+
+def test_classify_row54_kesco_complaint_reply(classifier):
+    """Row 54 issue: Official DISCOM replies with polite signoff 'धन्यवाद' MUST NOT be classified as APPRECIATION."""
+    text = "@MauryaMax53296 @UPPCLLKO @SKescokanpur @DMKanpur प्रिय उपभोक्ता, संबंधित अधिकारी द्वारा दी गयी जानकारी के अनुसार आपकी पूर्व में दर्ज शिकायत पर KS13102601198 काम चल रहा है। हम आपको शीघ्र ही अपडेट करेंगे अथवा शिकायत की स्थिति की जानकारी हेतु आप 1912 नम्बर पर संपर्क कर सकते है, धन्यवाद। #1912KESCo191026"
+    res = classifier.classify(text, mentioned_accounts=["@UPPCLLKO", "@SKescokanpur", "@DMKanpur"], author_username="KESCoHQ")
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "DISSATISFIED_CONSUMER"
+    assert res.confidence >= 0.85
+
+
+def test_classify_official_discom_resolution_reply(classifier):
+    """Official 1912/DISCOM replies stating resolution must be YES complaints, not citizen appreciation."""
+    text = "@UPPCLLKO @backup1kk Dear Sir, your complaint has been resolved. For the resolution of any future inconvenience, you may contact our toll-free number 1912. Thank you.@UPPCLLKO @mduppcl @aksharmaBharat @KESCoHQ #GoodGovernance #1912KESCo191026"
+    res = classifier.classify(text, mentioned_accounts=["@UPPCLLKO", "@mduppcl", "@aksharmaBharat", "@KESCoHQ"], author_username="KESCoHQ")
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "DISSATISFIED_CONSUMER"
+
+
+def test_classify_citizen_polite_request_with_dhanyawad(classifier):
+    """Consumer grievance ending with polite 'धन्यवाद' is a complaint, NOT appreciation."""
+    text = "@UPPCLLKO हमारे मोहल्ले में 11KV का तार टूट कर सड़क पर झूल रहा है, कृपया तुरंत ठीक कराएं, धन्यवाद।"
+    res = classifier.classify(text, mentioned_accounts=["@UPPCLLKO"], author_username="citizen_user")
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "POLE_RELATED"
+
+
+def test_classify_citizen_ots_request_with_aabhari(classifier):
+    """Citizen requesting OTS scheme ending with 'आभारी रहेंगे' is BILL_RELATED, NOT appreciation."""
+    text = "@aksharmaBharat @BJP4UP माननीय उर्जा मंत्री जी महोदय आपसे अनुरोध हैं कि बिजली बिल के पुराने बकाए पर एक मुस्त समाधान योजना OTS लाने की कृपा करें जनता हित के लिए जिससे सभी लोगों का पुराना बकाया बिल भरा जा सके महोदय सभी आपके आभारी रहेंगे 🙏"
+    res = classifier.classify(text, mentioned_accounts=["@aksharmaBharat", "@BJP4UP"], author_username="AshokVermayfxc")
+    assert res.is_complaint is True
+    assert res.picked_status == "YES"
+    assert res.complaint_type == "BILL_RELATED"
+
+
+def test_classify_genuine_hindi_appreciation(classifier):
+    """Authentic citizen appreciation when power is restored."""
+    text = "@MVVNLHQ @UPPCLLKO बिजली आ गई है धन्यवाद"
+    res = classifier.classify(text, mentioned_accounts=["@MVVNLHQ", "@UPPCLLKO"], author_username="Ajayverma_lko")
+    assert res.is_complaint is False
+    assert res.picked_status == "APPRECIATION"
+    assert res.complaint_type == ""
+
