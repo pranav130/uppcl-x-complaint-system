@@ -1,6 +1,8 @@
 # Environment variables & secrets
 .env
 *.env
+.env.yaml
+*.yaml.local
 *.json
 !appsscript.json
 !package.json
