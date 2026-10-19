@@ -20,6 +20,10 @@ RUN mkdir -p data logs
 ENV PYTHONUNBUFFERED=1
 ENV DRY_RUN=false
 ENV AUTO_POST_ENABLED=false
+ENV PORT=10000
 
-# Default entrypoint runs daemon mode
-CMD ["python", "-m", "uppcl_x_automation.cli", "sync", "--daemon"]
+# Expose Render/Cloud web port
+EXPOSE 10000
+
+# Entrypoint runs server.py which starts both the HTTP health endpoint and background sync worker
+CMD ["python", "-m", "uppcl_x_automation.server"]

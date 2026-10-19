@@ -1,12 +1,14 @@
 services:
-  - type: worker
+  - type: web
     name: uppcl-complaint-daemon
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
-    plan: starter
+    plan: free
     region: singapore # Closest to India
     autoDeploy: true
     envVars:
+      - key: PORT
+        value: "10000"
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: DRY_RUN
